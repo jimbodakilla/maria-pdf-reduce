@@ -15,6 +15,10 @@ This re-encodes those page images as JPEG and leaves the rest of the file alone.
 - **Page count, page geometry, text layers and colour profiles are preserved.**
 - **Nothing is uploaded.** There is no server; all work happens in the browser.
 - **Never returns a file larger than the original.** If it cannot help, it says so.
+- **Sends straight from the phone.** Where the browser supports it, each finished file
+  gets a **Send** button that opens the native share sheet, so the PDF goes directly to
+  WhatsApp, Messages or Mail instead of landing in Files to be hunted down later.
+- **Installs to the Home Screen and works offline.** No network is needed to compress.
 
 ## Measured results
 
@@ -34,14 +38,25 @@ JPEG is lossy. Keep your originals if a file may ever need to serve as evidentia
 
 ## Running locally
 
-A single HTML file plus two icons, no build step. Serve the folder:
+A single HTML file plus icons and `vendor/`, no build step. Serve the folder:
 
 ```sh
 python3 -m http.server 8000
 ```
 
-Two external dependencies, both from CDN: `pdf-lib` and `pako`. If they are blocked,
-the page says so instead of silently doing nothing.
+Two dependencies, `pdf-lib` and `pako`, are vendored into `vendor/` rather than loaded
+from a CDN: a blocked or slow network used to leave the page dead, and a phone is exactly
+where that happens. Only `pako`'s inflate-only build is shipped, since nothing here
+deflates. To refresh them:
+
+```sh
+npm pack pdf-lib@1.17.1 pako@2.1.0
+tar xzf pdf-lib-1.17.1.tgz && cp package/dist/pdf-lib.min.js vendor/
+tar xzf pako-2.1.0.tgz && cp package/dist/pako_inflate.min.js vendor/
+```
+
+Sharing needs a secure context, so test over `https://` or `127.0.0.1`; `file://` gives
+no service worker and no share sheet.
 
 ## Licence
 

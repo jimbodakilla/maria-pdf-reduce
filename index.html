@@ -8,6 +8,10 @@
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-512.png">
 <meta name="theme-color" content="#E11D2E">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PDF Reduce">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -189,6 +193,8 @@ h1{
   font-size:13px; font-weight:600; padding:0 16px; min-height:44px; border-radius:999px; cursor:pointer;
 }
 .redo:hover{border-color:var(--red); color:var(--red)}
+.redo.send{background:var(--red); border-color:var(--red); color:#fff}
+.redo.send:hover{background:var(--red-deep); border-color:var(--red-deep); color:#fff}
 
 /* ---------- explainer ---------- */
 .explain{max-width:640px; padding-block:32px 60px; border-top:1px solid var(--line-soft); margin-top:48px}
@@ -368,8 +374,8 @@ td:first-child{color:var(--dark); font-weight:500}
   </main>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/pako_inflate.min.js"></script>
 <script>
 (() => {
 "use strict";
@@ -426,8 +432,11 @@ const ES = {
   "r.leftAlone":"{n} se dejaron tal cual, mira abajo.","r.leftAlone1":"1 se dejó tal cual, mira abajo.",
   "r.savedLabel":"ahorrados","r.savedLine":"ahorrados, {x}× más pequeño en total","r.none":"No se pudo hacer más pequeño ningún archivo.",
   "r.under":"menos de 1 KB","r.xsmaller":"{x}× más pequeño",
+  "r.send":"Enviar","r.sendagain":"Enviar otra vez",
+  "r.shared":"Compartido","r.sharing":"Abriendo tus apps…",
+  "r.sharefail":"No se pudo abrir el menú de compartir, así que se guardó en su lugar.",
   "r.deadTitle":"Maria’s PDF Reduce no pudo cargar",
-  "r.deadBody":"Falta una parte del programa, normalmente porque la red bloquea cdnjs.cloudflare.com. Prueba en otra red o pide a tu equipo de IT que permita ese dominio.",
+  "r.deadBody":"Una parte del programa no se cargó. Recarga la página. Si sigue igual, puede que la app no haya terminado de instalarse.",
   "r.more":"y {n} archivos más que no son PDF"
 };
 const EN = {
@@ -449,8 +458,11 @@ const EN = {
   "r.leftAlone":"{n} were left as they are, see below.","r.leftAlone1":"1 was left as it is, see below.",
   "r.savedLabel":"saved","r.savedLine":"saved, {x}× smaller overall","r.none":"No files could be made smaller.",
   "doc.title":"Maria’s PDF Reduce — make PDFs smaller","r.under":"under 1 KB","r.xsmaller":"{x}× smaller",
+  "r.send":"Send","r.sendagain":"Send again",
+  "r.shared":"Shared","r.sharing":"Opening your apps…",
+  "r.sharefail":"Could not open the share sheet, so it was saved instead.",
   "r.deadTitle":"Maria’s PDF Reduce could not load",
-  "r.deadBody":"Part of the program is missing, usually because the network blocks cdnjs.cloudflare.com. Try another network, or ask your IT team to allow that domain.",
+  "r.deadBody":"Part of the program did not load. Reload the page. If it still fails, the app may not have finished installing.",
   "r.more":"and {n} more files that are not PDFs"
 };
 let lang = "en";
@@ -512,6 +524,23 @@ if (typeof PDFLib === "undefined" || typeof pako === "undefined"){
 /* ============================ helpers ============================ */
 const $ = s => document.querySelector(s);
 const { PDFDocument, PDFName, PDFDict, PDFArray, PDFNumber, PDFRawStream, PDFRef } = PDFLib;
+
+/* Web Share with files, iOS Safari 15+. This is the whole point of the phone flow:
+   the finished PDF goes straight into WhatsApp, instead of landing in Files where
+   finding it again is most of the work. Probe it rather than sniffing the browser. */
+const CAN_SHARE_FILES = (() => {
+  try {
+    if (!navigator.canShare || !navigator.share) return false;
+    const probe = new File([new Uint8Array(1)], "probe.pdf", { type:"application/pdf" });
+    return navigator.canShare({ files:[probe] });
+  } catch (e){ return false; }
+})();
+/* A phone wants the share sheet, not a downloads folder to dig through afterwards,
+   and auto-saving each file as it finishes would fight that. Desktop is unchanged. */
+if (CAN_SHARE_FILES && window.matchMedia("(pointer: coarse)").matches){
+  const autoBox = document.querySelector("#auto");
+  if (autoBox) autoBox.checked = false;
+}
 
 const mb = n => n >= 9.95e5 ? (n/1e6).toFixed(n >= 9.95e6 ? 0 : 1) + " MB"
               : n >= 1e3 ? Math.round(n/1e3) + " KB" : t("r.under");
@@ -903,22 +932,42 @@ async function run(){
         const blob = new Blob([bytes], { type:"application/pdf" });
         const fname = outName(file.name, tag, naming);
         const auto = $("#auto").checked;
-        const addBtn = (key) => {
+        const addBtn = (key, onClick, cls) => {
           const note = li.querySelector(".note");
           const btn = document.createElement("button");
-          btn.className = "redo"; btn.type = "button";
-          btn.dataset.k = key;
+          btn.className = cls || "redo"; btn.type = "button";
+          btn.dataset.k = key;                       // redrawStatic relabels by this on a language switch
           btn.textContent = t(key);
-          btn.addEventListener("click", () => saveBlob(blob, fname));
+          btn.addEventListener("click", onClick);
           note.appendChild(btn);
+        };
+        /* Safari drops the user activation across an await, so navigator.share has to be
+           reached in the same task as the tap: the File is built synchronously here and
+           nothing is awaited before the call. */
+        const doSend = () => {
+          let f;
+          try { f = new File([blob], fname, { type:"application/pdf" }); }
+          catch (e){ saveBlob(blob, fname); return; }
+          navigator.share({ files:[f] }).then(
+            () => showActions("r.shared", "ok", "r.sendagain"),
+            err => {
+              // backing out of the sheet is a decision, not a failure: leave the row alone
+              if (err && err.name === "AbortError") return;
+              showActions("r.sharefail", "err");
+              saveBlob(blob, fname);
+            });
+        };
+        const showActions = (noteKey, cls, sendKey) => {
+          setNote(li, noteKey, cls);                 // setNote clears the note, so buttons are re-added after it
+          if (CAN_SHARE_FILES) addBtn(sendKey || "r.send", doSend, "redo send");
+          addBtn(noteKey === "r.sent" ? "r.saveagain" : "r.save", () => saveBlob(blob, fname));
         };
         if (auto){
           setNote(li, "r.waitingSave", "ok");
-          queueSave(blob, fname, () => { setNote(li, "r.sent", "ok"); addBtn("r.saveagain"); });
+          queueSave(blob, fname, () => showActions("r.sent", "ok"));
           autoSaves++;
         } else {
-          setNote(li, "r.ready", "ok");
-          addBtn("r.save");
+          showActions("r.ready", "ok");
         }
         updateTally();
         say(`${file.name}, ${mb(file.size)} → ${mb(bytes.length)}`);
@@ -1038,6 +1087,15 @@ window.addEventListener("beforeunload", e => {
 });
 window.__prensa = { press };
 })();
+</script>
+<script>
+/* Registered outside the main block so it still runs if the libraries fail to load:
+   an offline shell is exactly what gets the page back on a weak signal. */
+if ("serviceWorker" in navigator && location.protocol !== "file:"){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
