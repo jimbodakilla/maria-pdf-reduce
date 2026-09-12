@@ -103,6 +103,9 @@ h1{
 .switches{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center}
 .sw{display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink-soft); cursor:pointer}
 .sw input{width:16px; height:16px; accent-color:var(--cyan); cursor:pointer; flex:none}
+.sw select{font:inherit; font-size:13.5px; color:var(--ink); background:var(--paper);
+  border:1px solid var(--line); border-radius:var(--r); padding:4px 7px; cursor:pointer; max-width:100%}
+.sw select:hover{border-color:var(--muted)}
 
 .privacy{
   display:flex; gap:10px; align-items:flex-start; margin:24px 0 0;
@@ -206,22 +209,28 @@ td:not(:first-child),th:not(:first-child){text-align:right; padding-right:0}
         <fieldset class="presets">
           <legend data-i18n="preset.legend">Compression strength</legend>
           <label class="opt">
-            <input type="radio" name="q" value="0.92">
+            <input type="radio" name="q" value="0.92" data-tag="archive">
             <span><strong data-i18n="preset.a.t">Archive</strong><em data-i18n="preset.a.s">~5× lighter, no visible change</em></span>
           </label>
           <label class="opt">
-            <input type="radio" name="q" value="0.76" checked>
+            <input type="radio" name="q" value="0.76" checked data-tag="balanced">
             <span><strong data-i18n="preset.b.t">Balanced</strong><em data-i18n="preset.b.s">~12× lighter. Recommended</em></span>
           </label>
           <label class="opt">
-            <input type="radio" name="q" value="0.60">
+            <input type="radio" name="q" value="0.60" data-tag="smallest">
             <span><strong data-i18n="preset.c.t">Smallest</strong><em data-i18n="preset.c.s">~18× lighter, softer detail</em></span>
           </label>
         </fieldset>
 
         <div class="switches">
           <label class="sw"><input type="checkbox" id="auto" checked><span data-i18n="sw.auto">Save each file the moment it is done</span></label>
-          <label class="sw"><input type="checkbox" id="keepname"><span data-i18n="sw.name">Keep the original filenames</span></label>
+          <label class="sw" for="naming"><span data-i18n="sw.name">Saved as</span>
+            <select id="naming">
+              <option value="tag" selected>nombre-compressed.pdf</option>
+              <option value="preset">nombre-compressed-balanced.pdf</option>
+              <option value="same" data-i18n="sw.same">the same name as the original</option>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -293,7 +302,7 @@ const ES = {
   "preset.b.t":"Equilibrado","preset.b.s":"~12× más liviano. Recomendado",
   "preset.c.t":"Mínimo","preset.c.s":"~18× más liviano, detalle más suave",
   "sw.auto":"Guardar cada archivo apenas esté listo",
-  "sw.name":"Conservar los nombres originales",
+  "sw.name":"Guardar como","sw.same":"el mismo nombre del original",
   "privacy":"Tus archivos nunca salen de este equipo. No hay servidor. El prensado ocurre dentro de tu navegador, así que los documentos privados siguen siendo privados. Puedes incluso desconectarte de internet una vez cargada la página.",
   "tally.working":"Prensando…","tally.saved":"ahorrados","tally.stop":"Detener","tally.done":"Listo",
   "how.h":"Qué hace Prensa en realidad",
@@ -347,6 +356,7 @@ function applyLang(next){
   document.querySelectorAll(".lang button").forEach(b =>
     b.setAttribute("aria-pressed", String(b.dataset.lang === next)));
   try { localStorage.setItem("prensa.lang", next); } catch (e) {}
+  if (typeof refreshNamingHints === "function") refreshNamingHints();
   redrawStatic();
 }
 document.querySelectorAll(".lang button").forEach(b =>
@@ -606,10 +616,25 @@ function saveBlob(blob, filename){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
-function outName(name){
-  const base = name.replace(/\.pdf$/i, "");
-  return $("#keepname").checked ? base + ".pdf" : base + "-compressed.pdf";
+function presetTag(){
+  const el = document.querySelector('input[name="q"]:checked');
+  return (el && el.dataset.tag) || "compressed";
 }
+function outName(name){
+  const base = name.replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]+/g, "").trim() || "document";
+  const mode = $("#naming").value;
+  if (mode === "same") return base + ".pdf";
+  if (mode === "preset") return `${base}-compressed-${presetTag()}.pdf`;
+  return base + "-compressed.pdf";
+}
+/* keep the example filenames in the picker honest about the chosen setting */
+function refreshNamingHints(){
+  const sel = $("#naming");
+  const sample = lang === "es" ? "nombre" : "filename";
+  sel.options[0].textContent = `${sample}-compressed.pdf`;
+  sel.options[1].textContent = `${sample}-compressed-${presetTag()}.pdf`;
+}
+document.querySelectorAll('input[name="q"]').forEach(r => r.addEventListener("change", refreshNamingHints));
 
 async function run(){
   if (running) return;
@@ -714,6 +739,7 @@ picker.addEventListener("change", () => { accept(picker.files); picker.value = "
 stopBtn.addEventListener("click", () => { stopped = true; queue.forEach(q => setNote(q.li, "r.stopped")); queue = []; });
 
 stopBtn.hidden = true;
+refreshNamingHints();
 try { const l = localStorage.getItem("prensa.lang"); if (l === "es") applyLang("es"); } catch (e) {}
 window.__prensa = { press };   // test hook
 })();
