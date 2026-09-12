@@ -1,0 +1,4 @@
+*.pdf
+dl*/
+fixtures/
+.DS_Store

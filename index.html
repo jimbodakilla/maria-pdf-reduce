@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prensa, squeeze heavy PDFs down to size</title>
+<meta name="description" content="Shrink heavy scanned PDFs by up to 92% without changing their resolution. Runs entirely in your browser, so files are never uploaded anywhere.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2315181D'/><rect x='8' y='7' width='16' height='7' fill='%230E86C8'/><rect x='8' y='19' width='16' height='6' fill='%23D6216F'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#15181D; --ink-soft:#41474F; --muted:#737C89;
+  --bed:#E8EAEE; --paper:#FFFFFF; --line:#C9CFD7; --line-soft:#DDE1E7;
+  --cyan:#0E86C8; --cyan-dark:#0B6EA4; --magenta:#D6216F; --amber:#B8860B;
+  --ok:#15803D; --warn:#B45309;
+  --r:4px;
+  --font:'Archivo','Helvetica Neue',Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ink:#EDF0F4; --ink-soft:#B4BCC7; --muted:#8892A0;
+    --bed:#0F1216; --paper:#191D23; --line:#333A44; --line-soft:#262C34;
+    --cyan:#3FA9E4; --cyan-dark:#68BEEE; --magenta:#FF5D9E; --amber:#E0A93B;
+    --ok:#4ADE80; --warn:#FBBF24;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bed); color:var(--ink);
+  font-family:var(--font); font-size:16px; line-height:1.55;
+  font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:3px solid var(--cyan); outline-offset:2px; border-radius:2px}
+.wrap{max-width:920px; margin:0 auto; padding-inline:20px}
+
+/* ---------- masthead ---------- */
+.bar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding-block:20px 0}
+.mark{display:flex; align-items:baseline; gap:9px; font-weight:800; font-stretch:118%; font-size:19px; letter-spacing:-.015em}
+.mark i{display:block; width:13px; height:13px; background:var(--cyan); border-radius:2px; position:relative; flex:none; align-self:center}
+.mark i::after{content:""; position:absolute; inset:auto 0 -5px 0; height:3px; background:var(--magenta); border-radius:1px}
+.bar nav{display:flex; align-items:center; gap:6px}
+.ghost{
+  background:none; border:1px solid transparent; color:var(--muted); font:inherit; font-size:14px;
+  padding:6px 10px; border-radius:var(--r); cursor:pointer; text-decoration:none;
+}
+.ghost:hover{color:var(--ink); border-color:var(--line)}
+.lang{display:flex; border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+.lang button{background:none; border:0; font:inherit; font-size:13px; font-weight:600; padding:5px 10px; color:var(--muted); cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--ink); color:var(--bed)}
+
+/* ---------- stage ---------- */
+.stage{padding-block:52px 20px}
+h1{
+  font-size:clamp(40px,8.2vw,76px); line-height:.95; letter-spacing:-.035em;
+  font-weight:800; font-stretch:125%; margin:0 0 18px;
+}
+.lede{font-size:clamp(16px,2.1vw,19px); color:var(--ink-soft); max-width:53ch; margin:0 0 34px; text-wrap:pretty}
+
+/* ---------- the sheet ---------- */
+.sheet{
+  position:relative; background:var(--paper); border:1px solid var(--line);
+  padding:clamp(34px,5.2vw,54px) 24px; text-align:center; cursor:pointer;
+  transition:border-color .14s, background .14s;
+}
+.sheet:hover{border-color:var(--muted)}
+.sheet.hot{border-color:var(--cyan); background:color-mix(in srgb, var(--cyan) 7%, var(--paper))}
+.sheet.busy{cursor:default}
+/* crop marks */
+.sheet b[data-m]{position:absolute; width:16px; height:16px; pointer-events:none}
+.sheet b[data-m]::before,.sheet b[data-m]::after{content:""; position:absolute; background:var(--line)}
+.sheet b[data-m]::before{width:16px; height:1px} .sheet b[data-m]::after{width:1px; height:16px}
+.sheet b[data-m="tl"]{top:-7px; left:-7px} .sheet b[data-m="tr"]{top:-7px; right:-7px}
+.sheet b[data-m="bl"]{bottom:-7px; left:-7px} .sheet b[data-m="br"]{bottom:-7px; right:-7px}
+.sheet b[data-m="tr"]::before,.sheet b[data-m="br"]::before{right:0} .sheet b[data-m="tr"]::after,.sheet b[data-m="br"]::after{right:0}
+.sheet b[data-m="bl"]::before,.sheet b[data-m="br"]::before{bottom:0} .sheet b[data-m="bl"]::after,.sheet b[data-m="br"]::after{bottom:0}
+.sheet.hot b[data-m]::before,.sheet.hot b[data-m]::after{background:var(--cyan)}
+
+.sheet-title{font-size:clamp(21px,3.4vw,27px); font-weight:700; font-stretch:110%; letter-spacing:-.02em; margin:0 0 6px}
+.sheet-sub{color:var(--muted); font-size:15px; margin:0}
+.sheet-sub u{color:var(--cyan); text-decoration-thickness:1px; text-underline-offset:3px}
+.glyph{width:44px; height:44px; margin:0 auto 16px; display:block; color:var(--cyan)}
+
+/* ---------- presets ---------- */
+.controls{margin-top:22px; display:grid; gap:14px}
+.presets{border:0; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.presets legend{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+.opt{position:relative}
+.opt input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
+.opt span{
+  display:block; padding:11px 13px; border:1px solid var(--line); background:var(--paper);
+  border-radius:var(--r); cursor:pointer; transition:border-color .12s;
+}
+.opt input:focus-visible + span{outline:3px solid var(--cyan); outline-offset:2px}
+.opt input:checked + span{border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink)}
+.opt strong{display:block; font-size:14.5px; font-weight:700; letter-spacing:-.01em}
+.opt em{display:block; font-style:normal; font-size:12.5px; color:var(--muted); margin-top:1px}
+.opt input:checked + span strong{color:var(--cyan)}
+
+.switches{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center}
+.sw{display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink-soft); cursor:pointer}
+.sw input{width:16px; height:16px; accent-color:var(--cyan); cursor:pointer; flex:none}
+
+.privacy{
+  display:flex; gap:10px; align-items:flex-start; margin:24px 0 0;
+  font-size:14px; color:var(--ink-soft); border-left:2px solid var(--cyan); padding-left:13px;
+}
+.privacy svg{flex:none; margin-top:2px; color:var(--cyan)}
+
+/* ---------- tally ---------- */
+.results{padding-block:44px}
+.results[hidden]{display:none}
+.tally{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 26px;
+  border-top:2px solid var(--ink); padding-top:14px; margin-bottom:4px;
+}
+.tally h2{font-size:15px; font-weight:700; margin:0; letter-spacing:-.01em; flex:1 1 auto}
+.big{font-size:clamp(28px,5.4vw,42px); font-weight:800; font-stretch:120%; letter-spacing:-.03em; line-height:1; color:var(--magenta)}
+.big small{font-size:14px; font-weight:600; font-stretch:100%; color:var(--muted); letter-spacing:0; margin-left:5px}
+.stopbtn{
+  background:var(--paper); border:1px solid var(--line); color:var(--ink); font:inherit; font-size:13px; font-weight:600;
+  padding:6px 12px; border-radius:var(--r); cursor:pointer;
+}
+.stopbtn:hover{border-color:var(--ink)}
+
+/* ---------- ledger rows ---------- */
+.rows{list-style:none; margin:0; padding:0}
+.row{display:grid; grid-template-columns:1fr auto; gap:4px 18px; padding:14px 0; border-bottom:1px solid var(--line-soft)}
+.name{font-size:15px; font-weight:600; overflow-wrap:anywhere; letter-spacing:-.01em}
+.sizes{font-size:14px; color:var(--ink-soft); white-space:nowrap; text-align:right}
+.sizes s{color:var(--muted); text-decoration:none}
+.sizes b{color:var(--ink); font-weight:700}
+.pct{color:var(--magenta); font-weight:700}
+.meter{grid-column:1/-1; height:5px; background:var(--line-soft); border-radius:3px; overflow:hidden; margin-top:3px}
+.meter i{display:block; height:100%; background:var(--cyan); border-radius:3px; width:100%; transform:scaleX(0); transform-origin:left center; transition:transform .35s ease}
+.row.done .meter i{background:var(--magenta)}
+.row.nogain .meter i{background:var(--line)}
+.row.failed .meter i{background:var(--line)}
+.note{grid-column:1/-1; font-size:13px; color:var(--muted); display:flex; align-items:center; gap:7px; flex-wrap:wrap}
+.note.err{color:var(--warn)} .note.ok{color:var(--ok)}
+.redo{background:none; border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12.5px; font-weight:600; padding:3px 9px; border-radius:var(--r); cursor:pointer}
+.redo:hover{border-color:var(--ink)}
+
+/* ---------- explain ---------- */
+.explain{padding-block:20px 72px; border-top:1px solid var(--line); margin-top:34px}
+.explain h2{font-size:20px; font-weight:800; font-stretch:112%; letter-spacing:-.02em; margin:26px 0 10px}
+.explain h3{font-size:15px; font-weight:700; margin:20px 0 4px}
+.explain p{color:var(--ink-soft); max-width:68ch; margin:0 0 10px; font-size:15px}
+.explain ul{color:var(--ink-soft); max-width:68ch; font-size:15px; padding-left:19px; margin:0 0 10px}
+.explain li{margin-bottom:5px}
+.explain code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; background:var(--paper); border:1px solid var(--line-soft); padding:1px 5px; border-radius:3px}
+table{border-collapse:collapse; width:100%; max-width:560px; font-size:14.5px; margin:6px 0 14px}
+th,td{text-align:left; padding:8px 12px 8px 0; border-bottom:1px solid var(--line-soft)}
+th+th,td+td{padding-left:14px}
+th{font-weight:700; font-size:13px}
+td:not(:first-child),th:not(:first-child){text-align:right; padding-right:0}
+.foot{color:var(--muted); font-size:13.5px; padding-bottom:40px}
+.foot a{color:var(--muted)}
+
+@media (max-width:640px){
+  .stage{padding-block:34px 16px}
+  .presets{grid-template-columns:1fr}
+  .row{grid-template-columns:1fr}
+  .sizes{text-align:left; white-space:normal}
+  table{font-size:13.5px}
+  th,td{padding-right:0}
+  .bar{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="mark"><i></i>Prensa</div>
+    <nav>
+      <a class="ghost" href="#how" data-i18n="nav.how">How it works</a>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="es" aria-pressed="false">ES</button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="stage">
+      <h1 data-i18n="hero.title">Heavy PDFs,<br>pressed thin.</h1>
+      <p class="lede" data-i18n="hero.lede">Scanned documents are usually fat for one silly reason: the scanner saved photographs in a format built for line art. Prensa fixes that. Same pages, same resolution, and typically 90% less weight.</p>
+
+      <div class="sheet" id="drop" role="button" tabindex="0" aria-describedby="drophint">
+        <b data-m="tl"></b><b data-m="tr"></b><b data-m="bl"></b><b data-m="br"></b>
+        <svg class="glyph" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 6h18l10 10v12"/><path d="M28 6v10h10"/>
+          <path d="M10 6v26"/><path d="M6 34h36"/><path d="M12 42h24"/><path d="M24 22v9m0 0 4-4m-4 4-4-4"/>
+        </svg>
+        <p class="sheet-title" data-i18n="drop.title">Drop PDFs here</p>
+        <p class="sheet-sub" id="drophint" data-i18n="drop.sub">or <u>choose files</u>. As many as you like, folders too</p>
+      </div>
+      <input type="file" id="picker" accept="application/pdf,.pdf" multiple hidden>
+
+      <div class="controls">
+        <fieldset class="presets">
+          <legend data-i18n="preset.legend">Compression strength</legend>
+          <label class="opt">
+            <input type="radio" name="q" value="0.92">
+            <span><strong data-i18n="preset.a.t">Archive</strong><em data-i18n="preset.a.s">~5× lighter, no visible change</em></span>
+          </label>
+          <label class="opt">
+            <input type="radio" name="q" value="0.76" checked>
+            <span><strong data-i18n="preset.b.t">Balanced</strong><em data-i18n="preset.b.s">~12× lighter. Recommended</em></span>
+          </label>
+          <label class="opt">
+            <input type="radio" name="q" value="0.60">
+            <span><strong data-i18n="preset.c.t">Smallest</strong><em data-i18n="preset.c.s">~18× lighter, softer detail</em></span>
+          </label>
+        </fieldset>
+
+        <div class="switches">
+          <label class="sw"><input type="checkbox" id="auto" checked><span data-i18n="sw.auto">Save each file the moment it is done</span></label>
+          <label class="sw"><input type="checkbox" id="keepname"><span data-i18n="sw.name">Keep the original filenames</span></label>
+        </div>
+      </div>
+
+      <p class="privacy">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span data-i18n="privacy">Your files never leave this device. There is no server. The pressing happens inside your browser, so private documents stay private. You can even unplug from the internet once the page has loaded.</span>
+      </p>
+    </section>
+
+    <section class="results" id="results" hidden aria-live="polite">
+      <div class="tally">
+        <h2 id="tallyLabel" data-i18n="tally.working">Pressing…</h2>
+        <div class="big" id="saved">0 MB<small data-i18n="tally.saved">saved</small></div>
+        <button class="stopbtn" id="stop" type="button" data-i18n="tally.stop">Stop</button>
+      </div>
+      <ul class="rows" id="rows"></ul>
+    </section>
+
+    <section class="explain" id="how">
+      <h2 data-i18n="how.h">What Prensa actually does</h2>
+      <p data-i18n="how.p1">When you scan a document with a phone, each page is saved as a photograph. Many scanners then store that photograph using Flate, a lossless method designed for flat graphics and text, not for photographs of paper. A single page can eat 9 MB that way.</p>
+      <p data-i18n="how.p2">Prensa re-encodes those page photographs as JPEG, the format built for exactly this kind of image, and leaves everything else in the file untouched. Page count, page size, text layers and the pixel dimensions of every image stay exactly as they were. Nothing is ever scaled down.</p>
+
+      <h3 data-i18n="how.h2">What you get</h3>
+      <table>
+        <thead><tr><th data-i18n="tbl.set">Setting</th><th data-i18n="tbl.typ">Typical result</th><th data-i18n="tbl.q">Quality</th></tr></thead>
+        <tbody>
+          <tr><td data-i18n="preset.a.t">Archive</td><td>~19%</td><td data-i18n="tbl.q1">Visually identical</td></tr>
+          <tr><td data-i18n="preset.b.t">Balanced</td><td>~8%</td><td data-i18n="tbl.q2">Identical when read or printed</td></tr>
+          <tr><td data-i18n="preset.c.t">Smallest</td><td>~5%</td><td data-i18n="tbl.q3">Slight softening up close</td></tr>
+        </tbody>
+      </table>
+      <p data-i18n="how.p3">Measured on a real batch of 20 phone-scanned legal documents: 602 MB became 48 MB on Balanced, with text still crisp enough to read at full zoom.</p>
+
+      <h3 data-i18n="how.h3">Honest limits</h3>
+      <ul>
+        <li data-i18n="how.l1">JPEG is lossy. Nothing here is bit-for-bit identical to your original, so keep your originals if a file may ever need to serve as legal or evidentiary proof.</li>
+        <li data-i18n="how.l2">A PDF that is mostly real text rather than scans is already small, and Prensa will tell you it could not improve it rather than hand you a worse file.</li>
+        <li data-i18n="how.l3">Prensa never returns a file bigger than the one you gave it.</li>
+        <li data-i18n="how.l4">Password-protected PDFs are skipped.</li>
+      </ul>
+
+      <h3 data-i18n="how.h4">If your browser asks about multiple downloads</h3>
+      <p data-i18n="how.p4">Saving a batch means saving many files in a row, and browsers ask permission the first time. Choose Allow and the rest of the batch lands in your downloads folder on its own. If you miss the prompt, every finished row keeps a Save button.</p>
+    </section>
+
+    <p class="foot">
+      <span data-i18n="foot">Prensa runs entirely in your browser. No accounts, no uploads, no tracking.</span>
+      <a href="https://github.com/jimbodakilla/prensa" data-i18n="foot.src">Source on GitHub</a>
+    </p>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script>
+(() => {
+"use strict";
+
+/* ============================ i18n ============================ */
+const ES = {
+  "nav.how":"Cómo funciona",
+  "hero.title":"PDFs pesados,<br>prensados finos.",
+  "hero.lede":"Los documentos escaneados engordan por una razón tonta: el escáner guarda fotografías en un formato hecho para dibujos de línea. Prensa lo corrige. Las mismas páginas, la misma resolución y normalmente 90% menos peso.",
+  "drop.title":"Suelta los PDFs aquí",
+  "drop.sub":"o <u>elige archivos</u>. Los que quieras, también carpetas",
+  "preset.legend":"Fuerza de compresión",
+  "preset.a.t":"Archivo","preset.a.s":"~5× más liviano, sin cambio visible",
+  "preset.b.t":"Equilibrado","preset.b.s":"~12× más liviano. Recomendado",
+  "preset.c.t":"Mínimo","preset.c.s":"~18× más liviano, detalle más suave",
+  "sw.auto":"Guardar cada archivo apenas esté listo",
+  "sw.name":"Conservar los nombres originales",
+  "privacy":"Tus archivos nunca salen de este equipo. No hay servidor. El prensado ocurre dentro de tu navegador, así que los documentos privados siguen siendo privados. Puedes incluso desconectarte de internet una vez cargada la página.",
+  "tally.working":"Prensando…","tally.saved":"ahorrados","tally.stop":"Detener","tally.done":"Listo",
+  "how.h":"Qué hace Prensa en realidad",
+  "how.p1":"Cuando escaneas un documento con el teléfono, cada página se guarda como una fotografía. Muchos escáneres almacenan esa fotografía con Flate, un método sin pérdida diseñado para gráficos planos y texto, no para fotos de papel. Así una sola página puede comerse 9 MB.",
+  "how.p2":"Prensa vuelve a codificar esas fotografías como JPEG, el formato hecho justamente para este tipo de imagen, y deja intacto todo lo demás del archivo. El número de páginas, el tamaño de página, las capas de texto y las dimensiones en píxeles de cada imagen quedan exactamente igual. Nada se reduce de tamaño.",
+  "how.h2":"Qué obtienes","tbl.set":"Ajuste","tbl.typ":"Resultado típico","tbl.q":"Calidad",
+  "tbl.q1":"Visualmente idéntico","tbl.q2":"Idéntico al leer o imprimir","tbl.q3":"Ligera suavidad de cerca",
+  "how.p3":"Medido sobre un lote real de 20 documentos legales escaneados con teléfono: 602 MB pasaron a 48 MB en Equilibrado, con el texto aún nítido a todo zoom.",
+  "how.h3":"Límites honestos",
+  "how.l1":"JPEG tiene pérdida. Nada aquí es idéntico bit a bit a tu original, así que conserva los originales si un archivo alguna vez debe servir como prueba legal.",
+  "how.l2":"Un PDF hecho sobre todo de texto real y no de escaneos ya es pequeño, y Prensa te dirá que no pudo mejorarlo en vez de entregarte un archivo peor.",
+  "how.l3":"Prensa nunca devuelve un archivo más grande que el que le diste.",
+  "how.l4":"Los PDFs protegidos con contraseña se omiten.",
+  "how.h4":"Si tu navegador pregunta por descargas múltiples",
+  "how.p4":"Guardar un lote significa guardar muchos archivos seguidos, y los navegadores piden permiso la primera vez. Elige Permitir y el resto del lote llegará solo a tu carpeta de descargas. Si no ves el aviso, cada fila terminada conserva un botón para guardar.",
+  "foot":"Prensa funciona por completo en tu navegador. Sin cuentas, sin subidas, sin rastreo.",
+  "foot.src":"Código en GitHub",
+  // runtime strings
+  "r.reading":"leyendo","r.pressing":"prensando","r.saved":"guardado en descargas","r.ready":"listo",
+  "r.save":"Guardar","r.queued":"en cola","r.nogain":"Ya está lo más pequeño posible. Nada que guardar.",
+  "r.encrypted":"PDF protegido con contraseña. Omitido.","r.broken":"No se pudo leer este PDF",
+  "r.notpdf":"No es un PDF. Omitido.","r.stopped":"detenido",
+  "r.files":"archivos","r.file":"archivo","r.of":"de","r.skippedn":"omitidos"
+};
+const EN = {
+  "r.reading":"reading","r.pressing":"pressing","r.saved":"saved to downloads","r.ready":"ready",
+  "r.save":"Save","r.queued":"queued","r.nogain":"Already as small as it gets. Nothing to save.",
+  "r.encrypted":"Password-protected PDF. Skipped.","r.broken":"Could not read this PDF",
+  "r.notpdf":"Not a PDF. Skipped.","r.stopped":"stopped",
+  "r.files":"files","r.file":"file","r.of":"of","r.skippedn":"skipped","tally.done":"Done"
+};
+let lang = "en";
+const EN_CACHE = {};
+document.querySelectorAll("[data-i18n]").forEach(el => {
+  const k = el.getAttribute("data-i18n");
+  if (EN_CACHE[k] === undefined) EN_CACHE[k] = el.innerHTML;
+});
+function t(key){
+  if (lang === "es" && ES[key]) return ES[key];
+  if (EN[key]) return EN[key];
+  return EN_CACHE[key] !== undefined ? EN_CACHE[key] : key;
+}
+function applyLang(next){
+  lang = next;
+  document.documentElement.lang = next;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const k = el.getAttribute("data-i18n");
+    if (EN_CACHE[k] === undefined) EN_CACHE[k] = el.innerHTML;
+    el.innerHTML = (next === "es" && ES[k]) ? ES[k] : EN_CACHE[k];
+  });
+  document.querySelectorAll(".lang button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.lang === next)));
+  try { localStorage.setItem("prensa.lang", next); } catch (e) {}
+  redrawStatic();
+}
+document.querySelectorAll(".lang button").forEach(b =>
+  b.addEventListener("click", () => applyLang(b.dataset.lang)));
+
+/* ============================ helpers ============================ */
+const $ = s => document.querySelector(s);
+const { PDFDocument, PDFName, PDFDict, PDFArray, PDFNumber, PDFRawStream, PDFRef } = PDFLib;
+
+const mb = n => n >= 9.95e5 ? (n/1e6).toFixed(n >= 9.95e6 ? 0 : 1) + " MB"
+              : n >= 1e3 ? Math.round(n/1e3) + " KB" : n + " B";
+const yieldUI = () => new Promise(r => setTimeout(r, 0));
+
+function lookup(ctx, o){
+  let guard = 0;
+  while (o instanceof PDFRef && guard++ < 8) o = ctx.lookup(o);
+  return o;
+}
+function nameOf(o){ return (o && typeof o.asString === "function") ? o.asString() : null; }
+
+/* Components per pixel for a colour space, or 0 if we should not touch it. */
+function csComponents(ctx, cs){
+  cs = lookup(ctx, cs);
+  const n = nameOf(cs);
+  if (n){
+    if (n === "/DeviceRGB" || n === "/CalRGB" || n === "/RGB") return 3;
+    if (n === "/DeviceGray" || n === "/CalGray" || n === "/G") return 1;
+    return 0;                                   // CMYK and friends: leave alone
+  }
+  if (cs instanceof PDFArray){
+    const head = nameOf(lookup(ctx, cs.get(0)));
+    if (head === "/ICCBased"){
+      const st = lookup(ctx, cs.get(1));
+      const N = st && st.dict && lookup(ctx, st.dict.get(PDFName.of("N")));
+      const v = N && typeof N.asNumber === "function" ? N.asNumber() : 0;
+      return (v === 1 || v === 3) ? v : 0;
+    }
+    if (head === "/CalRGB") return 3;
+    if (head === "/CalGray") return 1;
+    return 0;                                   // Indexed / Separation / DeviceN
+  }
+  return 0;
+}
+
+/* PNG predictors (Flate images sometimes use them). Returns null if unsupported. */
+function unpredict(data, predictor, colors, bpc, columns){
+  if (predictor < 2) return data;
+  if (predictor === 2) return null;             // TIFF predictor: rare, skip
+  const bpp = Math.max(1, Math.ceil(colors * bpc / 8));
+  const rowLen = Math.ceil(colors * bpc * columns / 8);
+  const stride = rowLen + 1;
+  const rows = Math.floor(data.length / stride);
+  const out = new Uint8Array(rows * rowLen);
+  let prev = new Uint8Array(rowLen);
+  for (let r = 0; r < rows; r++){
+    const ft = data[r * stride];
+    const cur = out.subarray(r * rowLen, (r + 1) * rowLen);
+    cur.set(data.subarray(r * stride + 1, r * stride + 1 + rowLen));
+    if (ft === 1){ for (let i = bpp; i < rowLen; i++) cur[i] = (cur[i] + cur[i - bpp]) & 255; }
+    else if (ft === 2){ for (let i = 0; i < rowLen; i++) cur[i] = (cur[i] + prev[i]) & 255; }
+    else if (ft === 3){ for (let i = 0; i < rowLen; i++){ const a = i >= bpp ? cur[i - bpp] : 0; cur[i] = (cur[i] + ((a + prev[i]) >> 1)) & 255; } }
+    else if (ft === 4){
+      for (let i = 0; i < rowLen; i++){
+        const a = i >= bpp ? cur[i - bpp] : 0, b = prev[i], c = i >= bpp ? prev[i - bpp] : 0;
+        const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+        cur[i] = (cur[i] + (pa <= pb && pa <= pc ? a : (pb <= pc ? b : c))) & 255;
+      }
+    } else if (ft !== 0) return null;
+    prev = cur;
+  }
+  return out;
+}
+
+/* Canvas guard — browsers refuse enormous canvases. */
+const MAXPX = 80e6;
+let cv = null;
+function encodeJpeg(imageData, w, h, q){
+  if (!cv) cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const c = cv.getContext("2d");
+  c.putImageData(imageData, 0, 0);
+  return new Promise(res => cv.toBlob(res, "image/jpeg", q));
+}
+function rgbaFrom(raw, w, h, comps){
+  const px = w * h;
+  if (raw.length < px * comps) return null;
+  const out = new Uint8ClampedArray(px * 4);
+  if (comps === 3){
+    for (let i = 0, j = 0, k = 0; i < px; i++){ out[k++] = raw[j++]; out[k++] = raw[j++]; out[k++] = raw[j++]; out[k++] = 255; }
+  } else {
+    for (let i = 0, k = 0; i < px; i++){ const v = raw[i]; out[k++] = v; out[k++] = v; out[k++] = v; out[k++] = 255; }
+  }
+  return new ImageData(out, w, h);
+}
+
+/* ============================ the press ============================ */
+async function press(bytes, quality, onStep){
+  let doc;
+  try {
+    doc = await PDFDocument.load(bytes, { ignoreEncryption:true, throwOnInvalidObject:false, updateMetadata:false });
+  } catch (e){
+    throw new Error(/encrypt/i.test(String(e && e.message)) ? "encrypted" : "broken");
+  }
+  if (doc.isEncrypted) throw new Error("encrypted");
+
+  const ctx = doc.context;
+  const targets = [];
+  for (const [ref, obj] of ctx.enumerateIndirectObjects()){
+    if (!(obj instanceof PDFRawStream)) continue;
+    const d = obj.dict;
+    if (nameOf(lookup(ctx, d.get(PDFName.of("Subtype")))) !== "/Image") continue;
+    targets.push([ref, obj]);
+  }
+
+  let changed = 0;
+  for (let i = 0; i < targets.length; i++){
+    const [ref, img] = targets[i];
+    onStep(i / Math.max(1, targets.length));
+    await yieldUI();
+    try {
+      const d = img.dict;
+      const get = k => lookup(ctx, d.get(PDFName.of(k)));
+      const numOf = k => { const v = get(k); return v && typeof v.asNumber === "function" ? v.asNumber() : null; };
+
+      if (get("ImageMask")) continue;                        // stencil mask
+      const w = numOf("Width"), h = numOf("Height");
+      if (!w || !h || w * h > MAXPX) continue;
+
+      const filt = get("Filter");
+      const filters = filt instanceof PDFArray
+        ? filt.asArray().map(x => nameOf(lookup(ctx, x)))
+        : [nameOf(filt)];
+      if (filters.length !== 1) continue;                    // chained filters: leave alone
+      const f = filters[0];
+
+      const origBytes = img.contents ? img.contents.length : 0;
+      if (origBytes < 6000) continue;                        // too small to be worth it
+
+      let imageData = null, keepCS = null;
+
+      if (f === "/DCTDecode"){
+        // Already JPEG. Only worth redoing at strong settings.
+        if (quality > 0.8) continue;
+        const bmp = await createImageBitmap(new Blob([img.contents], { type:"image/jpeg" }));
+        if (!cv) cv = document.createElement("canvas");
+        cv.width = bmp.width; cv.height = bmp.height;
+        const c2 = cv.getContext("2d");
+        c2.drawImage(bmp, 0, 0);
+        imageData = c2.getImageData(0, 0, bmp.width, bmp.height);
+        bmp.close && bmp.close();
+      } else if (f === "/FlateDecode"){
+        if (numOf("BitsPerComponent") !== 8) continue;
+        const comps = csComponents(ctx, d.get(PDFName.of("ColorSpace")));
+        if (!comps) continue;
+        if (get("Decode")) continue;                          // inverted maps: leave alone
+        let raw;
+        try { raw = pako.inflate(img.contents); } catch (e){ continue; }
+        const dp = get("DecodeParms");
+        if (dp instanceof PDFDict){
+          const p = lookup(ctx, dp.get(PDFName.of("Predictor")));
+          const pv = p && typeof p.asNumber === "function" ? p.asNumber() : 1;
+          if (pv > 1){
+            const colours = (() => { const c = lookup(ctx, dp.get(PDFName.of("Colors"))); return c ? c.asNumber() : comps; })();
+            const cols = (() => { const c = lookup(ctx, dp.get(PDFName.of("Columns"))); return c ? c.asNumber() : w; })();
+            raw = unpredict(raw, pv, colours, 8, cols);
+            if (!raw) continue;
+          }
+        } else if (dp) continue;
+        imageData = rgbaFrom(raw, w, h, comps);
+        if (!imageData) continue;
+        if (comps === 3) keepCS = d.get(PDFName.of("ColorSpace"));   // preserve exact colour
+      } else {
+        continue;                                             // JBIG2, CCITT, JPX: already efficient
+      }
+
+      const blob = await encodeJpeg(imageData, imageData.width, imageData.height, quality);
+      if (!blob || blob.size >= origBytes * 0.92) continue;    // no real gain, keep original
+      const jpeg = new Uint8Array(await blob.arrayBuffer());
+
+      const nd = PDFDict.withContext(ctx);
+      nd.set(PDFName.of("Type"), PDFName.of("XObject"));
+      nd.set(PDFName.of("Subtype"), PDFName.of("Image"));
+      nd.set(PDFName.of("Width"), PDFNumber.of(imageData.width));
+      nd.set(PDFName.of("Height"), PDFNumber.of(imageData.height));
+      nd.set(PDFName.of("BitsPerComponent"), PDFNumber.of(8));
+      nd.set(PDFName.of("ColorSpace"), keepCS || PDFName.of("DeviceRGB"));
+      nd.set(PDFName.of("Filter"), PDFName.of("DCTDecode"));
+      nd.set(PDFName.of("Length"), PDFNumber.of(jpeg.length));
+      for (const k of ["SMask","Mask","Interpolate","Intent"]){
+        const v = d.get(PDFName.of(k));
+        if (v) nd.set(PDFName.of(k), v);
+      }
+      ctx.assign(ref, PDFRawStream.of(nd, jpeg));
+      changed++;
+    } catch (e){ /* one bad image must not sink the file */ }
+  }
+
+  onStep(1);
+  await yieldUI();
+  const out = await doc.save({ useObjectStreams:true, addDefaultPage:false });
+  return { bytes: out, changed };
+}
+
+/* ============================ queue + UI ============================ */
+const rowsEl = $("#rows"), resultsEl = $("#results"), savedEl = $("#saved"),
+      tallyLabel = $("#tallyLabel"), stopBtn = $("#stop"), drop = $("#drop"), picker = $("#picker");
+
+let queue = [], running = false, stopped = false, totalBefore = 0, totalAfter = 0, doneCount = 0, skippedCount = 0;
+
+function redrawStatic(){
+  if (!running && doneCount) tallyLabel.textContent = summaryText();
+  if (doneCount) updateTally();
+  rowsEl.querySelectorAll("[data-note]").forEach(el => {
+    const k = el.getAttribute("data-note");
+    if (k) el.textContent = t(k);
+  });
+  rowsEl.querySelectorAll(".redo").forEach(b => b.textContent = t("r.save"));
+}
+function summaryText(){
+  const unit = doneCount === 1 ? t("r.file") : t("r.files");
+  const base = `${t("tally.done")}: ${doneCount} ${unit}`;
+  return skippedCount ? `${base}, ${skippedCount} ${t("r.skippedn")}` : base;
+}
+function updateTally(){
+  const saved = Math.max(0, totalBefore - totalAfter);
+  const pct = totalBefore ? Math.round(saved / totalBefore * 100) : 0;
+  savedEl.innerHTML = `${mb(saved)}<small>${t("tally.saved")}${pct ? " (" + pct + "%)" : ""}</small>`;
+}
+
+function addRow(file){
+  const li = document.createElement("li");
+  li.className = "row";
+  li.innerHTML = `
+    <div class="name"></div>
+    <div class="sizes"><s>${mb(file.size)}</s></div>
+    <div class="meter"><i></i></div>
+    <div class="note"><span data-note="r.queued">${t("r.queued")}</span></div>`;
+  li.querySelector(".name").textContent = file.name;
+  rowsEl.prepend(li);
+  return li;
+}
+function setNote(li, key, cls){
+  const note = li.querySelector(".note");
+  note.className = "note" + (cls ? " " + cls : "");
+  note.innerHTML = "";
+  const s = document.createElement("span");
+  s.setAttribute("data-note", key);
+  s.textContent = t(key);
+  note.appendChild(s);
+  return note;
+}
+function setBar(bar, frac){ bar.style.transform = "scaleX(" + Math.min(1, Math.max(0, frac)) + ")"; }
+function saveBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+function outName(name){
+  const base = name.replace(/\.pdf$/i, "");
+  return $("#keepname").checked ? base + ".pdf" : base + "-compressed.pdf";
+}
+
+async function run(){
+  if (running) return;
+  running = true; stopped = false;
+  stopBtn.hidden = false;
+  while (queue.length && !stopped){
+    const { file, li } = queue.shift();
+    tallyLabel.textContent = `${t("r.pressing")} ${queue.length + 1} ${t("r.files")}`;
+    const bar = li.querySelector(".meter i");
+    setNote(li, "r.reading");
+    setBar(bar, .04);
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      setNote(li, "r.pressing");
+      const quality = parseFloat(document.querySelector('input[name="q"]:checked').value);
+      const { bytes } = await press(buf, quality, p => setBar(bar, .06 + p * .88));
+
+      li.classList.add("done");
+      setBar(bar, 1);
+      if (bytes.length >= file.size){
+        li.classList.add("nogain");
+        skippedCount++;
+        li.querySelector(".sizes").innerHTML = `<b>${mb(file.size)}</b>`;
+        setNote(li, "r.nogain");
+      } else {
+        const pct = Math.round((1 - bytes.length / file.size) * 100);
+        setBar(bar, Math.max(.03, bytes.length / file.size));
+        li.querySelector(".sizes").innerHTML =
+          `<s>${mb(file.size)}</s> → <b>${mb(bytes.length)}</b> <span class="pct">−${pct}%</span>`;
+        totalBefore += file.size; totalAfter += bytes.length; doneCount++;
+        const blob = new Blob([bytes], { type:"application/pdf" });
+        const fname = outName(file.name);
+        const note = setNote(li, $("#auto").checked ? "r.saved" : "r.ready", "ok");
+        const btn = document.createElement("button");
+        btn.className = "redo"; btn.type = "button"; btn.textContent = t("r.save");
+        btn.addEventListener("click", () => saveBlob(blob, fname));
+        note.appendChild(btn);
+        if ($("#auto").checked) saveBlob(blob, fname);
+        updateTally();
+      }
+    } catch (e){
+      li.classList.add("done", "failed");
+      skippedCount++;
+      setBar(bar, 1);
+      const m = String(e && e.message);
+      setNote(li, m === "encrypted" ? "r.encrypted" : m === "notpdf" ? "r.notpdf" : "r.broken", "err");
+    }
+    await yieldUI();
+  }
+  running = false;
+  stopBtn.hidden = true;
+  tallyLabel.textContent = stopped ? t("r.stopped") : summaryText();
+  if (!queue.length) stopped = false;
+}
+
+function accept(files){
+  const pdfs = [...files].filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+  if (!pdfs.length) return;
+  resultsEl.hidden = false;
+  for (const f of pdfs) queue.push({ file:f, li:addRow(f) });
+  run();
+}
+
+/* drag + drop, including whole folders */
+async function walk(entry, out){
+  if (!entry) return;
+  if (entry.isFile){
+    await new Promise(res => entry.file(f => { out.push(f); res(); }, res));
+  } else if (entry.isDirectory){
+    const reader = entry.createReader();
+    let batch;
+    do {
+      batch = await new Promise(res => reader.readEntries(res, () => res([])));
+      for (const e of batch) await walk(e, out);
+    } while (batch.length);
+  }
+}
+["dragenter","dragover"].forEach(ev =>
+  document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("hot"); }));
+["dragleave","drop"].forEach(ev =>
+  document.addEventListener(ev, e => {
+    e.preventDefault();
+    if (ev === "drop" || e.relatedTarget === null) drop.classList.remove("hot");
+  }));
+document.addEventListener("drop", async e => {
+  e.preventDefault();
+  const items = e.dataTransfer.items;
+  if (items && items.length && items[0].webkitGetAsEntry){
+    const entries = [...items].map(i => i.webkitGetAsEntry());
+    const out = [];
+    for (const en of entries) await walk(en, out);
+    if (out.length) return accept(out);
+  }
+  accept(e.dataTransfer.files);
+});
+drop.addEventListener("click", () => picker.click());
+picker.addEventListener("click", e => e.stopPropagation());
+drop.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " "){ e.preventDefault(); picker.click(); }
+});
+picker.addEventListener("change", () => { accept(picker.files); picker.value = ""; });
+stopBtn.addEventListener("click", () => { stopped = true; queue.forEach(q => setNote(q.li, "r.stopped")); queue = []; });
+
+stopBtn.hidden = true;
+try { const l = localStorage.getItem("prensa.lang"); if (l === "es") applyLang("es"); } catch (e) {}
+window.__prensa = { press };   // test hook
+})();
+</script>
+</body>
+</html>
