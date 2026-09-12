@@ -6,7 +6,7 @@
 <title>Maria’s PDF Reduce — make PDFs smaller</title>
 <meta name="description" content="Fast, easy and secure PDF compression for your documents. Same quality, smaller files. Nothing is uploaded: it all happens in your browser.">
 <link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon-512.png">
 <meta name="theme-color" content="#E11D2E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +17,7 @@
   --pink:#FFE5E8; --pink-lite:#FFF4F5;
   --dark:#1F2937; --gray:#6B7280; --gray-deep:#5F6672;
   --bg:#FFFFFF; --surface:#FFFFFF;
-  --line:#8A8F99; --line-soft:#F0D4D8;
+  --line:#CC6F7B; --line-soft:#F0D4D8;
   --ok:#126C34; --warn:#9A4408;
   --r:12px; --rs:8px;
   --head:'Poppins','Helvetica Neue',Helvetica,Arial,sans-serif;
@@ -26,10 +26,10 @@
 @media (prefers-color-scheme:dark){
   :root{
     --red:#FF6B78; --red-deep:#FF8A94;
-    --pink:#2B2128; --pink-lite:#20242B;
+    --pink:#3B2A30; --pink-lite:#241A1E;
     --dark:#E5E7EB; --gray:#A8B0BC; --gray-deep:#BDC4CE;
     --bg:#16181D; --surface:#1F2937;
-    --line:#4B5563; --line-soft:#343B46;
+    --line:#A05A66; --line-soft:#3A3038;
     --ok:#4ADE80; --warn:#FBBF24;
   }
 }
@@ -48,9 +48,10 @@ h1,h2,h3,.uihead{font-family:var(--head)}
 /* ---------- masthead ---------- */
 .bar{display:flex; align-items:center; justify-content:space-between; gap:14px; padding-block:18px 0; flex-wrap:wrap}
 .brand{display:flex; align-items:center; gap:11px; text-decoration:none; color:inherit}
-.brand img{width:42px; height:42px; flex:none}
+.brand img{width:54px; height:31px; flex:none}
 .brand .nm{font-family:var(--head); font-weight:700; font-size:19px; line-height:1.15; letter-spacing:-.01em; color:var(--dark)}
 .brand .nm i{font-style:normal; color:var(--red)}
+.brand .nm .hrt{font-size:10px; color:var(--red); vertical-align:.42em; margin-left:1px; font-weight:400}
 .brand .tag{font-family:var(--body); font-size:10px; font-weight:600; letter-spacing:.12em; color:var(--gray); display:block; margin-top:1px}
 .bar nav{display:flex; align-items:center; gap:6px}
 .ghost{
@@ -59,11 +60,14 @@ h1,h2,h3,.uihead{font-family:var(--head)}
   min-height:44px; display:inline-flex; align-items:center;
 }
 .ghost:hover{color:var(--red); border-color:var(--line-soft)}
-.lang{display:flex; border:1px solid var(--line); border-radius:999px; overflow:hidden}
+.lang{display:flex; border:1px solid var(--line); border-radius:999px}
 .lang button{
   font-family:var(--head); background:none; border:0; font-size:13px; font-weight:600;
   padding:0 15px; color:var(--gray); cursor:pointer; min-height:44px; min-width:48px;
 }
+.lang button:first-child{border-radius:999px 0 0 999px}
+.lang button:last-child{border-radius:0 999px 999px 0}
+.lang button:focus-visible{outline:none; box-shadow:0 0 0 3px var(--red); position:relative; z-index:1}
 .lang button[aria-pressed="true"]{background:var(--red); color:#fff}
 
 /* ---------- hero ---------- */
@@ -76,7 +80,7 @@ h1{
 
 /* ---------- the drop card ---------- */
 .sheet{
-  position:relative; background:var(--pink-lite); border:2px dashed var(--pink);
+  position:relative; background:var(--pink-lite); border:2px dashed var(--line);
   border-radius:20px; padding:clamp(30px,4.6vw,48px) 24px; text-align:center;
   transition:border-color .15s, background .15s, transform .15s;
 }
@@ -95,7 +99,7 @@ h1{
   padding:0 32px; min-height:52px; cursor:pointer; box-shadow:0 6px 18px rgba(225,29,46,.22);
 }
 .pick:hover{background:var(--red-deep)}
-@media (prefers-color-scheme:dark){ .pick{background:#E11D2E; color:#fff} .pick:hover{background:#C2182A} }
+
 .sheet-sub{color:var(--gray-deep); font-size:14.5px; margin:16px 0 0}
 .touch-only{display:none}
 @media (hover:none){
@@ -111,7 +115,7 @@ h1{
 .opt{position:relative}
 .opt input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
 .opt span{
-  display:block; padding:13px 15px; border:1.5px solid var(--line-soft); background:var(--surface);
+  display:block; padding:13px 15px; border:1.5px solid var(--line); background:var(--surface);
   border-radius:var(--r); cursor:pointer; min-height:64px; transition:border-color .12s, background .12s;
 }
 .opt input:focus-visible + span{outline:3px solid var(--red); outline-offset:2px}
@@ -120,7 +124,7 @@ h1{
 .opt em{display:block; font-style:normal; font-size:12.5px; color:var(--gray); margin-top:2px}
 
 .switches{display:flex; flex-wrap:wrap; gap:4px 24px; align-items:center}
-.sw{display:flex; align-items:center; gap:9px; font-size:14px; color:var(--gray-deep); cursor:pointer; min-height:44px}
+.sw{display:flex; align-items:center; gap:9px; font-size:14px; color:var(--gray); cursor:pointer; min-height:44px}
 .sw input{width:20px; height:20px; accent-color:var(--red); cursor:pointer; flex:none}
 .sw select{
   font:inherit; font-size:13.5px; color:var(--dark); background:var(--surface);
@@ -140,22 +144,22 @@ h1{
 .privacy b{font-weight:600; color:var(--dark)}
 
 /* ---------- reassurance strip ---------- */
-.feats{display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin:34px 0 0; padding:0; list-style:none}
+.feats{display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin:34px 0 0; padding:0; list-style:none}
 .feats li{text-align:center}
-.feats .ic{width:46px; height:46px; margin:0 auto 9px; display:grid; place-items:center;
+.feats .ic{width:50px; height:50px; margin:0 auto 9px; display:grid; place-items:center;
   background:var(--pink); border-radius:50%; color:var(--red)}
 .feats strong{font-family:var(--head); display:block; font-size:14px; font-weight:600; color:var(--dark)}
 .feats span{font-size:12.5px; color:var(--gray); line-height:1.45; display:block; margin-top:1px}
 
 /* ---------- results ---------- */
-.results{padding-block:44px 0}
+.results{padding-block:48px 0}
 .results[hidden]{display:none}
-.tally{border-top:2px solid var(--pink); padding-top:18px}
+.tally{border-top:1px solid var(--line-soft); padding-top:32px}
 .big{font-family:var(--head); font-size:clamp(38px,7.4vw,60px); font-weight:700;
   letter-spacing:-.03em; line-height:1.05; color:var(--red); margin:0}
 .big small{font-family:var(--body); font-size:15px; font-weight:500; letter-spacing:0; color:var(--gray); margin-left:9px}
-.tally h2{font-family:var(--head); font-size:16px; font-weight:600; margin:8px 0 0; color:var(--dark)}
-.tally p.sub{font-size:14px; color:var(--gray); margin:3px 0 0}
+.tally h2{font-family:var(--head); font-size:16px; font-weight:600; margin:14px 0 0; color:var(--dark)}
+.tally p.sub{font-size:14px; color:var(--gray); margin:6px 0 0}
 .tallyhead{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:10px 20px}
 .stopbtn{
   font-family:var(--head); background:var(--surface); border:1.5px solid var(--line); color:var(--dark);
@@ -169,26 +173,25 @@ h1{
 .row{display:grid; grid-template-columns:1fr auto; gap:3px 18px; padding:14px 0; border-bottom:1px solid var(--line-soft)}
 .row:last-child{border-bottom:0}
 .name{font-size:15px; font-weight:600; overflow-wrap:anywhere; color:var(--dark)}
-.sizes{font-size:14px; color:var(--gray-deep); white-space:nowrap; text-align:right}
+.sizes{font-size:14px; color:var(--gray); white-space:nowrap; text-align:right}
 .sizes s{color:var(--gray); text-decoration:none}
 .sizes b{color:var(--dark); font-weight:700}
 .pct{color:var(--red); font-weight:700}
 @media (prefers-color-scheme:light){ .pct{color:var(--red-deep)} }
 .meter{grid-column:1/-1; height:7px; background:var(--pink); border-radius:4px; overflow:hidden; margin-top:5px}
-.meter i{display:block; height:100%; width:100%; background:var(--red); border-radius:4px;
+.meter i{display:block; height:100%; width:100%; background:linear-gradient(90deg,#E11D2E,#FFB3BC); border-radius:4px;
   transform:scaleX(0); transform-origin:left center; transition:transform .35s ease}
 .row.nogain .meter,.row.failed .meter{display:none}
 .note{grid-column:1/-1; font-size:13.5px; color:var(--gray); display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:3px}
 .note.err{color:var(--warn)} .note.ok{color:var(--gray-deep)}
 .redo{
-  font-family:var(--head); background:var(--surface); border:1.5px solid var(--line-soft); color:var(--dark);
-  font-size:13px; font-weight:600; padding:0 14px; min-height:38px; border-radius:999px; cursor:pointer;
+  font-family:var(--head); background:var(--surface); border:1.5px solid var(--line); color:var(--dark);
+  font-size:13px; font-weight:600; padding:0 16px; min-height:44px; border-radius:999px; cursor:pointer;
 }
 .redo:hover{border-color:var(--red); color:var(--red)}
 
 /* ---------- explainer ---------- */
-.explain{padding-block:34px 60px; border-top:1px solid var(--line-soft); margin-top:56px}
-.explain > *{max-width:640px}
+.explain{max-width:640px; padding-block:32px 60px; border-top:1px solid var(--line-soft); margin-top:48px}
 .explain h2{font-size:22px; font-weight:600; letter-spacing:-.02em; margin:0 0 12px; color:var(--dark)}
 .explain h3{font-size:15.5px; font-weight:600; margin:26px 0 5px; color:var(--dark)}
 .explain p{color:var(--gray); margin:0 0 11px; font-size:15px}
@@ -204,13 +207,21 @@ td:first-child{color:var(--dark); font-weight:500}
 .foot a{color:var(--red)}
 .foot .sig{display:block; font-size:11px; font-weight:600; letter-spacing:.14em; color:var(--gray); margin-top:10px}
 
-@media (max-width:720px){ .feats{grid-template-columns:repeat(2,1fr); gap:22px 14px} }
+@media (max-width:720px){ .feats{grid-template-columns:1fr; gap:16px; text-align:left}
+  .feats li{display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:center; text-align:left}
+  .feats .ic{margin:0} }
+@media (max-width:600px){ .bar nav{flex:1 0 100%; justify-content:space-between; margin-top:2px} }
 @media (max-width:640px){
   .presets{grid-template-columns:1fr}
   .opt span{min-height:0}
   .row{grid-template-columns:1fr}
   .sizes{text-align:left; white-space:normal}
   table{font-size:13.5px}
+}
+@media (prefers-color-scheme:dark){
+  .pick{background:#E11D2E; color:#fff} .pick:hover{background:#C2182A}
+  .lang button[aria-pressed="true"]{background:#E11D2E}
+  .sw input{accent-color:#E11D2E}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
 </style>
@@ -220,9 +231,9 @@ td:first-child{color:var(--dark); font-weight:500}
 <div class="wrap">
   <header class="bar">
     <a class="brand" href="./">
-      <img src="icon-192.png" width="42" height="42" alt="">
+      <img src="logo-mark.png" width="54" height="31" alt="">
       <span>
-        <span class="nm">Maria’s <i>PDF</i> Reduce</span>
+        <span class="nm">Maria’s<b class="hrt" aria-hidden="true">♥</b> <i>PDF</i> Reduce</span>
         <span class="tag" data-i18n="tagline">SAME QUALITY. SMALLER FILES.</span>
       </span>
     </a>
@@ -242,9 +253,10 @@ td:first-child{color:var(--dark); font-weight:500}
 
       <div class="sheet" id="drop">
         <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M4 9V5a1 1 0 0 1 1-1h4"/><path d="M20 9V5a1 1 0 0 0-1-1h-4"/>
-          <path d="M4 15v4a1 1 0 0 0 1 1h4"/><path d="M20 15v4a1 1 0 0 1-1 1h-4"/>
-          <path d="M9 12h6"/><path d="M12 9l-3 3 3 3"/><path d="M12 9l3 3-3 3"/>
+          <path d="M8.5 3h5L17 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 19V4.5A1.5 1.5 0 0 1 8.5 3z"/>
+          <path d="M13.5 3v3.5H17"/>
+          <path d="M2 12h3.2"/><path d="M4 10l2 2-2 2"/>
+          <path d="M22 12h-3.2"/><path d="M20 10l-2 2 2 2"/>
         </svg>
         <p class="sheet-title">
           <span class="pointer-only" data-i18n="drop.title">Drop your PDFs here</span>
@@ -291,20 +303,16 @@ td:first-child{color:var(--dark); font-weight:500}
 
       <ul class="feats">
         <li>
-          <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h6"/><path d="M20 12h-6"/><path d="M7 9l3 3-3 3"/><path d="M17 9l-3 3 3 3"/></svg></span>
-          <strong data-i18n="f1.t">Compress</strong><span data-i18n="f1.s">Up to 18× smaller</span>
+          <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5v14"/><path d="M21 5v14"/><path d="M7 12h10"/><path d="M10 9l-3 3 3 3"/><path d="M14 9l3 3-3 3"/></svg></span>
+          <span><strong data-i18n="f1.t">Compress</strong><span data-i18n="f1.s">One real batch went from 602 MB to 48 MB</span></span>
         </li>
         <li>
-          <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span>
-          <strong data-i18n="f2.t">Secure</strong><span data-i18n="f2.s">Nothing is uploaded</span>
+          <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>
+          <span><strong data-i18n="f3.t">Fast</strong><span data-i18n="f3.s">A few seconds per file, however many you drop</span></span>
         </li>
         <li>
-          <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>
-          <strong data-i18n="f3.t">Fast</strong><span data-i18n="f3.s">Seconds per file</span>
-        </li>
-        <li>
-          <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></span>
-          <strong data-i18n="f4.t">Easy to use</strong><span data-i18n="f4.s">Same pages, same quality</span>
+          <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></span>
+          <span><strong data-i18n="f4.t">Easy to use</strong><span data-i18n="f4.s">No account, nothing to install</span></span>
         </li>
       </ul>
     </section>
@@ -372,10 +380,9 @@ const ES = {
   "hero.title":"Haz tus PDFs más pequeños.<br>Conserva lo que importa.",
   "hero.lede":"Compresión de PDF rápida, fácil y segura para tus documentos. Los escaneos del teléfono quedan unas 10 veces más pequeños, con las mismas páginas y la misma resolución.",
   "drop.title":"Suelta aquí tus PDFs","drop.titleTouch":"Elige tus PDFs","drop.btn":"Elegir archivos PDF",
-  "f1.t":"Comprime","f1.s":"Hasta 18× más pequeño",
-  "f2.t":"Seguro","f2.s":"No se sube nada",
-  "f3.t":"Rápido","f3.s":"Segundos por archivo",
-  "f4.t":"Fácil de usar","f4.s":"Mismas páginas, misma calidad",
+  "f1.t":"Comprime","f1.s":"Un lote real pasó de 602 MB a 48 MB",
+  "f3.t":"Rápido","f3.s":"Unos segundos por archivo, sin importar cuántos sueltes",
+  "f4.t":"Fácil de usar","f4.s":"Sin cuenta, nada que instalar",
   "drop.sub":"Todos los archivos que quieras, también carpetas. No se sube nada.",
   "preset.legend":"¿Qué tan pequeños los quieres?",
   "preset.a.t":"Máxima calidad","preset.a.s":"Unas 5× más pequeño",
@@ -401,10 +408,11 @@ const ES = {
   "foot":"Funciona por completo en tu navegador. Sin cuentas, sin subidas, sin rastreo.",
   "foot.src":"Código en GitHub",
   "r.reading":"leyendo…","r.pressing":"haciéndolo más pequeño…","r.queued":"en espera",
-  "r.sent":"Enviado a tu carpeta de descargas","r.ready":"Listo para guardar","r.save":"Guardar",
+  "r.sent":"Guardado. Revisa tu carpeta de descargas","r.ready":"Listo para guardar","r.save":"Guardar",
   "r.saveagain":"Guardar otra vez",
   "r.nogain":"Ya está lo más pequeño posible. No hay nada que guardar.",
-  "r.toobig":"Algunas páginas son demasiado grandes para este navegador. Prueba en una computadora.",
+  "r.unsupported":"Sus páginas usan un formato que esta herramienta no puede recodificar.",
+  "r.toobig":"Algunas páginas son más grandes de lo que este navegador puede recodificar.",
   "r.alreadyjpg":"Sus páginas ya son JPEG. Prueba con Ideal para correo o Lo más pequeño.",
   "r.encrypted":"Este PDF está protegido con contraseña, así que no se puede abrir. Quítale la contraseña y vuelve a soltarlo.",
   "r.broken":"No se pudo leer este PDF. Puede estar dañado.",
@@ -416,14 +424,18 @@ const ES = {
   "r.inDownloads1":"1 archivo más pequeño está en tu carpeta de descargas.",
   "r.leftAlone":"{n} se dejaron tal cual, mira abajo.","r.leftAlone1":"1 se dejó tal cual, mira abajo.",
   "r.savedLabel":"ahorrados","r.savedLine":"ahorrados, {p}% más pequeño","r.none":"No se pudo hacer más pequeño ningún archivo.",
-  "r.under":"menos de 1 KB"
+  "r.under":"menos de 1 KB",
+  "r.deadTitle":"Maria’s PDF Reduce no pudo cargar",
+  "r.deadBody":"Falta una parte del programa, normalmente porque la red bloquea cdnjs.cloudflare.com. Prueba en otra red o pide a tu equipo de IT que permita ese dominio.",
+  "r.more":"y {n} archivos más que no son PDF"
 };
 const EN = {
   "r.reading":"reading…","r.pressing":"making it smaller…","r.queued":"waiting",
-  "r.sent":"Sent to your Downloads folder","r.ready":"Ready to save","r.save":"Save",
+  "r.sent":"Saved. Check your Downloads folder","r.ready":"Ready to save","r.save":"Save",
   "r.saveagain":"Save again",
   "r.nogain":"Already as small as it gets. Nothing to save.",
-  "r.toobig":"Some pages are too large for this browser. Try again on a computer.",
+  "r.unsupported":"Its pages use a format this tool cannot re-encode.",
+  "r.toobig":"Some pages are larger than this browser can re-encode.",
   "r.alreadyjpg":"Its pages are already JPEG. Try Best for email or Smallest.",
   "r.encrypted":"This PDF is locked with a password, so it cannot be opened. Remove the password and drop it again.",
   "r.broken":"Could not read this PDF. It may be damaged.",
@@ -435,7 +447,10 @@ const EN = {
   "r.inDownloads1":"1 smaller file is in your Downloads folder.",
   "r.leftAlone":"{n} were left as they are, see below.","r.leftAlone1":"1 was left as it is, see below.",
   "r.savedLabel":"saved","r.savedLine":"saved, {p}% smaller","r.none":"No files could be made smaller.",
-  "r.under":"under 1 KB"
+  "r.under":"under 1 KB",
+  "r.deadTitle":"Maria’s PDF Reduce could not load",
+  "r.deadBody":"Part of the program is missing, usually because the network blocks cdnjs.cloudflare.com. Try another network, or ask your IT team to allow that domain.",
+  "r.more":"and {n} more files that are not PDFs"
 };
 let lang = "en";
 const EN_CACHE = {};
@@ -449,7 +464,7 @@ function t(key, vars){
   if (vars) for (const k in vars) v = v.replace("{" + k + "}", vars[k]);
   return v;
 }
-let refreshNamingHints = null, redrawStatic = null;
+let refreshNamingHints = null, redrawStatic = null, deadPainter = null;
 function applyLang(next){
   lang = next;
   document.documentElement.lang = next;
@@ -462,6 +477,7 @@ function applyLang(next){
   try { localStorage.setItem("prensa.lang", next); } catch (e) {}
   if (refreshNamingHints) refreshNamingHints();
   if (redrawStatic) redrawStatic();
+  if (deadPainter) deadPainter();
 }
 document.querySelectorAll(".lang button").forEach(b =>
   b.addEventListener("click", () => applyLang(b.dataset.lang)));
@@ -475,14 +491,19 @@ try {
    blocked, and without this guard every drop would silently do nothing forever. */
 if (typeof PDFLib === "undefined" || typeof pako === "undefined"){
   const sheet = document.getElementById("drop");
+  const title = sheet.querySelector(".sheet-title");
+  const sub = sheet.querySelector(".sheet-sub");
   sheet.classList.add("broken");
-  sheet.querySelector(".glyph").innerHTML = '<path d="M24 6 4 42h40L24 6z"/><path d="M24 20v10"/><path d="M24 35h.02"/>';
-  sheet.querySelector(".sheet-title").textContent =
-    lang === "es" ? "Maria’s PDF Reduce no pudo cargar" : "Maria’s PDF Reduce could not load";
+  // these no longer hold their original copy, so keep applyLang's generic pass off them
+  title.removeAttribute("data-i18n");
+  sub.removeAttribute("data-i18n");
+  title.innerHTML = "";
+  sheet.querySelector(".glyph").innerHTML =
+    '<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v4"/><path d="M12 17.5h.01"/>';
   const pk = document.getElementById("pick"); if (pk) pk.remove();
-  sheet.querySelector(".sheet-sub").textContent = lang === "es"
-    ? "Falta una parte del programa, normalmente porque la red bloquea cdnjs.cloudflare.com. Prueba en otra red o pide a tu equipo de IT que permita ese dominio."
-    : "Part of the program is missing, usually because the network blocks cdnjs.cloudflare.com. Try another network, or ask your IT team to allow that domain.";
+  const controls = document.querySelector(".controls"); if (controls) controls.hidden = true;
+  deadPainter = () => { title.textContent = t("r.deadTitle"); sub.textContent = t("r.deadBody"); };
+  deadPainter();
   return;
 }
 
@@ -692,7 +713,7 @@ const rowsEl = $("#rows"), resultsEl = $("#results"), savedEl = $("#saved"),
       tallyLabel = $("#tallyLabel"), tallySub = $("#tallySub"), stopBtn = $("#stop"),
       drop = $("#drop"), picker = $("#picker"), statusEl = $("#status"), dlhint = $("#dlhint");
 
-let queue = [], running = false, stopped = false;
+let queue = [], running = false, stopped = false, emptyReason = null;
 let totalBefore = 0, totalAfter = 0, doneCount = 0, skippedCount = 0;
 let batchTotal = 0, batchDone = 0, autoSaves = 0;
 
@@ -707,9 +728,9 @@ function presetTag(){
   const el = document.querySelector('input[name="q"]:checked');
   return (el && el.dataset.tag) || "compressed";
 }
-function outName(name, tag){
+function outName(name, tag, mode){
   const base = name.replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]+/g, "").trim() || "document";
-  const mode = $("#naming").value;
+  mode = mode || $("#naming").value;
   if (mode === "same") return base + ".pdf";
   if (mode === "preset") return `${base}-compressed-${tag || presetTag()}.pdf`;
   return base + "-compressed.pdf";
@@ -742,6 +763,9 @@ redrawStatic = function(){
       tallyLabel.textContent = `${t("r.finished")} ${finishText()}`;
       tallySub.textContent = skippedCount
         ? (skippedCount === 1 ? t("r.leftAlone1") : t("r.leftAlone", { n: skippedCount })) : "";
+    } else if (emptyReason){
+      tallyLabel.textContent = t(emptyReason);
+      tallySub.textContent = "";
     } else if (rowsEl.children.length){
       tallyLabel.textContent = t("r.stoppedAll");
       tallySub.textContent = "";
@@ -804,8 +828,9 @@ async function run(){
   resultsEl.setAttribute("aria-busy", "true");
   say(t("r.working", { n: batchTotal }), true);
 
+  try {
   while (queue.length && !stopped){
-    const { file, li, quality, tag } = queue.shift();
+    const { file, li, quality, tag, naming } = queue.shift();
     tallyLabel.textContent = t("r.working", { n: batchTotal });
     tallySub.textContent = t("r.progress", { d: batchDone, n: batchTotal });
     const bar = li.querySelector(".meter i");
@@ -823,7 +848,10 @@ async function run(){
         li.classList.add("nogain");
         skippedCount++;
         li.querySelector(".sizes").textContent = mb(file.size);
-        setNote(li, why.tooBig ? "r.toobig" : why.alreadyJpeg ? "r.alreadyjpg" : "r.nogain");
+        const top = Object.keys(why).reduce((a, b) => why[b] > why[a] ? b : a, "tooBig");
+        setNote(li, !why[top] ? "r.nogain"
+          : top === "tooBig" ? "r.toobig"
+          : top === "alreadyJpeg" ? "r.alreadyjpg" : "r.unsupported");
       } else {
         const pct = Math.round((1 - bytes.length / file.size) * 100);
         setBar(bar, pct / 100);                    // the bar shows how much came off
@@ -831,7 +859,7 @@ async function run(){
           `<s>${mb(file.size)}</s> &rarr; <b>${mb(bytes.length)}</b> <span class="pct">&minus;${pct}%</span>`;
         totalBefore += file.size; totalAfter += bytes.length; doneCount++;
         const blob = new Blob([bytes], { type:"application/pdf" });
-        const fname = outName(file.name, tag);
+        const fname = outName(file.name, tag, naming);
         const auto = $("#auto").checked;
         const note = setNote(li, auto ? "r.sent" : "r.ready", "ok");
         const btn = document.createElement("button");
@@ -857,14 +885,16 @@ async function run(){
     await yieldUI();
   }
 
-  queue.forEach(q => { q.li.classList.add("done", "failed"); setNote(q.li, "r.stopped"); });
-  queue = [];
-  running = false;
-  stopped = false;
-  resultsEl.setAttribute("aria-busy", "false");
-  stopBtn.hidden = true;
-  redrawStatic();
-  say(`${t("r.finished")} ${finishText()}`, true);
+  } finally {
+    queue.forEach(q => { q.li.classList.add("done", "failed"); setNote(q.li, "r.stopped"); });
+    queue = [];
+    running = false;
+    stopped = false;
+    resultsEl.setAttribute("aria-busy", "false");
+    stopBtn.hidden = true;
+    redrawStatic();
+    say(`${t("r.finished")} ${finishText()}`, true);
+  }
 }
 
 function accept(files){
@@ -874,18 +904,28 @@ function accept(files){
   if (!all.length) return;
   resultsEl.hidden = false;
   others.slice(0, 25).forEach(f => rejectRow(f.name));
+  if (others.length > 25){
+    const li = document.createElement("li");
+    li.className = "row done failed";
+    li.innerHTML = '<div class="name"></div><div class="sizes"></div><div class="note err"></div>';
+    li.querySelector(".note").textContent = t("r.more", { n: others.length - 25 });
+    rowsEl.append(li);
+  }
   if (!pdfs.length){
-    tallyLabel.textContent = t("r.onlypdf");
+    emptyReason = "r.onlypdf";
+    tallyLabel.textContent = t(emptyReason);
     tallySub.textContent = "";
     say(t("r.onlypdf"), true);
     revealResults();
     return;
   }
+  emptyReason = null;
   const quality = parseFloat(document.querySelector('input[name="q"]:checked').value);
   const tag = presetTag();
+  const naming = $("#naming").value;
   batchTotal = (running ? batchTotal : 0) + pdfs.length;
   if (!running) batchDone = 0;
-  for (const f of pdfs) queue.push({ file:f, li:addRow(f), quality, tag });
+  for (const f of pdfs) queue.push({ file:f, li:addRow(f), quality, tag, naming });
   revealResults();
   run();
 }
@@ -929,12 +969,15 @@ picker.addEventListener("change", () => { accept(picker.files); picker.value = "
 stopBtn.addEventListener("click", () => {
   stopped = true;
   stopBtn.disabled = true;
-  say(t("r.stopped"), true);
+  say(t("r.stoppedAll"), true);
   setTimeout(() => { stopBtn.disabled = false; }, 1500);
 });
 
 stopBtn.hidden = true;
 refreshNamingHints();
+window.addEventListener("beforeunload", e => {
+  if (running){ e.preventDefault(); e.returnValue = ""; }
+});
 window.__prensa = { press };
 })();
 </script>
