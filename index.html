@@ -328,6 +328,7 @@ td:first-child{color:var(--dark); font-weight:500}
           <button class="stopbtn" id="stop" type="button" data-i18n="tally.stop">Stop</button>
         </div>
         <p class="hint" id="dlhint" hidden data-i18n="hint.multi">Your browser may ask permission to save several files. Choose Allow.</p>
+        <p class="hint" id="bighint" hidden></p>
       </div>
       <ul class="rows" id="rows"></ul>
     </section>
@@ -408,7 +409,7 @@ const ES = {
   "foot":"Funciona por completo en tu navegador. Sin cuentas, sin subidas, sin rastreo.",
   "foot.src":"Código en GitHub","doc.title":"Maria’s PDF Reduce — haz tus PDFs más pequeños",
   "r.reading":"leyendo…","r.pressing":"haciéndolo más pequeño…","r.queued":"en espera",
-  "r.sent":"Guardado. Revisa tu carpeta de descargas","r.ready":"Listo para guardar","r.save":"Guardar",
+  "r.sent":"Guardado. Revisa tu carpeta de descargas","r.waitingSave":"Esperando para guardar…","r.saving":"Guardando tus archivos…","r.bigfile":"Uno de estos archivos es muy grande. En una computadora debería estar bien, pero un teléfono puede quedarse sin memoria.","r.ready":"Listo para guardar","r.save":"Guardar",
   "r.saveagain":"Guardar otra vez",
   "r.nogain":"Ya está lo más pequeño posible. No hay nada que guardar.",
   "r.unsupported":"Sus páginas usan un formato que esta herramienta no puede recodificar.",
@@ -431,7 +432,7 @@ const ES = {
 };
 const EN = {
   "r.reading":"reading…","r.pressing":"making it smaller…","r.queued":"waiting",
-  "r.sent":"Saved. Check your Downloads folder","r.ready":"Ready to save","r.save":"Save",
+  "r.sent":"Saved. Check your Downloads folder","r.waitingSave":"Waiting to save…","r.saving":"Saving your files…","r.bigfile":"One of these files is very large. It should be fine on a computer, but a phone may run out of memory.","r.ready":"Ready to save","r.save":"Save",
   "r.saveagain":"Save again",
   "r.nogain":"Already as small as it gets. Nothing to save.",
   "r.unsupported":"Its pages use a format this tool cannot re-encode.",
@@ -574,9 +575,12 @@ function unpredict(data, predictor, colors, bpc, columns){
   return out;
 }
 
-/* Safari caps canvas area near 16.7 Mpx. Above that toBlob returns null, and the page
-   would be silently reported as "already small". Stay under the lowest common limit. */
-const MAXPX = 16.5e6;
+/* Safari caps canvas area near 16.7 Mpx; desktop browsers go far higher. Pick the ceiling
+   per platform, and rely on the null-blob branch below if a canvas still refuses. */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  || (/^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent));
+const MAXPX = IS_IOS ? 16.5e6 : 60e6;
 let cv = null;
 function encodeJpeg(imageData, w, h, q){
   if (!cv) cv = document.createElement("canvas");
@@ -712,7 +716,8 @@ async function press(bytes, quality, onStep, shouldStop){
 /* ============================ queue + UI ============================ */
 const rowsEl = $("#rows"), resultsEl = $("#results"), savedEl = $("#saved"),
       tallyLabel = $("#tallyLabel"), tallySub = $("#tallySub"), stopBtn = $("#stop"),
-      drop = $("#drop"), picker = $("#picker"), statusEl = $("#status"), dlhint = $("#dlhint");
+      drop = $("#drop"), picker = $("#picker"), statusEl = $("#status"), dlhint = $("#dlhint"),
+      bighint = $("#bighint");
 
 let queue = [], running = false, stopped = false, emptyReason = null;
 let totalBefore = 0, totalAfter = 0, doneCount = 0, skippedCount = 0;
@@ -817,6 +822,31 @@ function saveBlob(blob, filename){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 180000);
 }
+/* Chrome starts only ~10 of 200 downloads fired back to back, and reports no error
+   for the ones it drops. Spacing them ~150ms apart gets every file through. */
+const SAVE_GAP = 160;
+const saveQ = [];
+let draining = false, lastSave = 0;
+function queueSave(blob, filename, onSent){
+  saveQ.push({ blob, filename, onSent });
+  drainSaves();
+}
+async function drainSaves(){
+  if (draining) return;
+  draining = true;
+  while (saveQ.length){
+    // the interval is measured from the previous dispatch, not from queue depth:
+    // files arrive slower than SAVE_GAP, so a depth check would never pace anything
+    const wait = SAVE_GAP - (Date.now() - lastSave);
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    const it = saveQ.shift();
+    lastSave = Date.now();
+    saveBlob(it.blob, it.filename);
+    if (it.onSent) it.onSent();
+  }
+  draining = false;
+  if (!running) finalize();
+}
 let revealed = false;
 function revealResults(target){
   if (revealed) return;
@@ -826,6 +856,11 @@ function revealResults(target){
   requestAnimationFrame(() => el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }));
 }
 
+function finalize(){
+  resultsEl.setAttribute("aria-busy", "false");
+  redrawStatic();
+  say(`${t("r.finished")} ${finishText()}`, true);
+}
 async function run(){
   if (running) return;
   running = true;
@@ -868,16 +903,22 @@ async function run(){
         const blob = new Blob([bytes], { type:"application/pdf" });
         const fname = outName(file.name, tag, naming);
         const auto = $("#auto").checked;
-        const note = setNote(li, auto ? "r.sent" : "r.ready", "ok");
-        const btn = document.createElement("button");
-        btn.className = "redo"; btn.type = "button";
-        btn.dataset.k = auto ? "r.saveagain" : "r.save";
-        btn.textContent = t(btn.dataset.k);
-        btn.addEventListener("click", () => saveBlob(blob, fname));
-        note.appendChild(btn);
+        const addBtn = (key) => {
+          const note = li.querySelector(".note");
+          const btn = document.createElement("button");
+          btn.className = "redo"; btn.type = "button";
+          btn.dataset.k = key;
+          btn.textContent = t(key);
+          btn.addEventListener("click", () => saveBlob(blob, fname));
+          note.appendChild(btn);
+        };
         if (auto){
-          saveBlob(blob, fname);
+          setNote(li, "r.waitingSave", "ok");
+          queueSave(blob, fname, () => { setNote(li, "r.sent", "ok"); addBtn("r.saveagain"); });
           autoSaves++;
+        } else {
+          setNote(li, "r.ready", "ok");
+          addBtn("r.save");
         }
         updateTally();
         say(`${file.name}, ${mb(file.size)} → ${mb(bytes.length)}`);
@@ -897,10 +938,13 @@ async function run(){
     queue = [];
     running = false;
     stopped = false;
-    resultsEl.setAttribute("aria-busy", "false");
     stopBtn.hidden = true;
-    redrawStatic();
-    say(`${t("r.finished")} ${finishText()}`, true);
+    if (saveQ.length || draining){
+      tallyLabel.textContent = t("r.saving", { n: saveQ.length });
+      tallySub.textContent = "";
+    } else {
+      finalize();
+    }
   }
 }
 
@@ -937,6 +981,7 @@ function accept(files){
   if (!running) batchDone = 0;
   let first = null;
   for (const f of pdfs){ const li = addRow(f); if (!first) first = li; queue.push({ file:f, li, quality, tag, naming }); }
+  if (pdfs.some(f => f.size > 120e6)){ bighint.textContent = t("r.bigfile"); bighint.hidden = false; }
   addRejects();
   revealResults(rowsEl.children.length > pdfs.length + others.length ? first : null);
   run();
