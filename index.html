@@ -3,174 +3,214 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prensa, squeeze heavy PDFs down to size</title>
-<meta name="description" content="Shrink heavy scanned PDFs by up to 92% without changing their resolution. Runs entirely in your browser, so files are never uploaded anywhere.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2315181D'/><rect x='8' y='7' width='16' height='7' fill='%230E86C8'/><rect x='8' y='19' width='16' height='6' fill='%23D6216F'/></svg>">
+<title>Maria’s PDF Reduce — make PDFs smaller</title>
+<meta name="description" content="Fast, easy and secure PDF compression for your documents. Same quality, smaller files. Nothing is uploaded: it all happens in your browser.">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#E11D2E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#15181D; --ink-soft:#41474F; --muted:#737C89;
-  --bed:#E8EAEE; --paper:#FFFFFF; --line:#C9CFD7; --line-soft:#DDE1E7;
-  --cyan:#0E86C8; --cyan-dark:#0B6EA4; --magenta:#D6216F; --amber:#B8860B;
-  --ok:#15803D; --warn:#B45309;
-  --r:4px;
-  --font:'Archivo','Helvetica Neue',Helvetica,Arial,sans-serif;
+  --red:#E11D2E; --red-deep:#B8121F;
+  --pink:#FFE5E8; --pink-lite:#FFF4F5;
+  --dark:#1F2937; --gray:#6B7280; --gray-deep:#5F6672;
+  --bg:#FFFFFF; --surface:#FFFFFF;
+  --line:#8A8F99; --line-soft:#F0D4D8;
+  --ok:#126C34; --warn:#9A4408;
+  --r:12px; --rs:8px;
+  --head:'Poppins','Helvetica Neue',Helvetica,Arial,sans-serif;
+  --body:'Inter','Helvetica Neue',Helvetica,Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){
   :root{
-    --ink:#EDF0F4; --ink-soft:#B4BCC7; --muted:#8892A0;
-    --bed:#0F1216; --paper:#191D23; --line:#333A44; --line-soft:#262C34;
-    --cyan:#3FA9E4; --cyan-dark:#68BEEE; --magenta:#FF5D9E; --amber:#E0A93B;
+    --red:#FF6B78; --red-deep:#FF8A94;
+    --pink:#2B2128; --pink-lite:#20242B;
+    --dark:#E5E7EB; --gray:#A8B0BC; --gray-deep:#BDC4CE;
+    --bg:#16181D; --surface:#1F2937;
+    --line:#4B5563; --line-soft:#343B46;
     --ok:#4ADE80; --warn:#FBBF24;
   }
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
-  margin:0; background:var(--bed); color:var(--ink);
-  font-family:var(--font); font-size:16px; line-height:1.55;
-  font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
-  -webkit-font-smoothing:antialiased;
+  margin:0; background:var(--bg); color:var(--dark);
+  font-family:var(--body); font-size:16px; line-height:1.6;
+  font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
 }
-:focus-visible{outline:3px solid var(--cyan); outline-offset:2px; border-radius:2px}
-.wrap{max-width:920px; margin:0 auto; padding-inline:20px}
+h1,h2,h3,.uihead{font-family:var(--head)}
+:focus-visible{outline:3px solid var(--red); outline-offset:2px; border-radius:4px}
+.wrap{max-width:940px; margin:0 auto; padding-inline:20px}
+.sr-only{position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
 
 /* ---------- masthead ---------- */
-.bar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding-block:20px 0}
-.mark{display:flex; align-items:baseline; gap:9px; font-weight:800; font-stretch:118%; font-size:19px; letter-spacing:-.015em}
-.mark i{display:block; width:13px; height:13px; background:var(--cyan); border-radius:2px; position:relative; flex:none; align-self:center}
-.mark i::after{content:""; position:absolute; inset:auto 0 -5px 0; height:3px; background:var(--magenta); border-radius:1px}
+.bar{display:flex; align-items:center; justify-content:space-between; gap:14px; padding-block:18px 0; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:11px; text-decoration:none; color:inherit}
+.brand img{width:42px; height:42px; flex:none}
+.brand .nm{font-family:var(--head); font-weight:700; font-size:19px; line-height:1.15; letter-spacing:-.01em; color:var(--dark)}
+.brand .nm i{font-style:normal; color:var(--red)}
+.brand .tag{font-family:var(--body); font-size:10px; font-weight:600; letter-spacing:.12em; color:var(--gray); display:block; margin-top:1px}
 .bar nav{display:flex; align-items:center; gap:6px}
 .ghost{
-  background:none; border:1px solid transparent; color:var(--muted); font:inherit; font-size:14px;
-  padding:6px 10px; border-radius:var(--r); cursor:pointer; text-decoration:none;
+  font-family:var(--head); background:none; border:1px solid transparent; color:var(--gray);
+  font-size:14px; font-weight:500; padding:10px; border-radius:var(--rs); text-decoration:none;
+  min-height:44px; display:inline-flex; align-items:center;
 }
-.ghost:hover{color:var(--ink); border-color:var(--line)}
-.lang{display:flex; border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
-.lang button{background:none; border:0; font:inherit; font-size:13px; font-weight:600; padding:5px 10px; color:var(--muted); cursor:pointer}
-.lang button[aria-pressed="true"]{background:var(--ink); color:var(--bed)}
+.ghost:hover{color:var(--red); border-color:var(--line-soft)}
+.lang{display:flex; border:1px solid var(--line); border-radius:999px; overflow:hidden}
+.lang button{
+  font-family:var(--head); background:none; border:0; font-size:13px; font-weight:600;
+  padding:0 15px; color:var(--gray); cursor:pointer; min-height:44px; min-width:48px;
+}
+.lang button[aria-pressed="true"]{background:var(--red); color:#fff}
 
-/* ---------- stage ---------- */
-.stage{padding-block:52px 20px}
+/* ---------- hero ---------- */
+.stage{padding-block:40px 20px}
 h1{
-  font-size:clamp(40px,8.2vw,76px); line-height:.95; letter-spacing:-.035em;
-  font-weight:800; font-stretch:125%; margin:0 0 18px;
+  font-size:clamp(32px,5vw,52px); line-height:1.1; letter-spacing:-.025em;
+  font-weight:700; margin:0 0 14px; text-wrap:balance; color:var(--dark);
 }
-.lede{font-size:clamp(16px,2.1vw,19px); color:var(--ink-soft); max-width:53ch; margin:0 0 34px; text-wrap:pretty}
+.lede{font-size:clamp(16px,1.9vw,18px); color:var(--gray); max-width:52ch; margin:0 0 30px}
 
-/* ---------- the sheet ---------- */
+/* ---------- the drop card ---------- */
 .sheet{
-  position:relative; background:var(--paper); border:1px solid var(--line);
-  padding:clamp(34px,5.2vw,54px) 24px; text-align:center; cursor:pointer;
-  transition:border-color .14s, background .14s;
+  position:relative; background:var(--pink-lite); border:2px dashed var(--pink);
+  border-radius:20px; padding:clamp(30px,4.6vw,48px) 24px; text-align:center;
+  transition:border-color .15s, background .15s, transform .15s;
 }
-.sheet:hover{border-color:var(--muted)}
-.sheet.hot{border-color:var(--cyan); background:color-mix(in srgb, var(--cyan) 7%, var(--paper))}
-.sheet.busy{cursor:default}
-/* crop marks */
-.sheet b[data-m]{position:absolute; width:16px; height:16px; pointer-events:none}
-.sheet b[data-m]::before,.sheet b[data-m]::after{content:""; position:absolute; background:var(--line)}
-.sheet b[data-m]::before{width:16px; height:1px} .sheet b[data-m]::after{width:1px; height:16px}
-.sheet b[data-m="tl"]{top:-7px; left:-7px} .sheet b[data-m="tr"]{top:-7px; right:-7px}
-.sheet b[data-m="bl"]{bottom:-7px; left:-7px} .sheet b[data-m="br"]{bottom:-7px; right:-7px}
-.sheet b[data-m="tr"]::before,.sheet b[data-m="br"]::before{right:0} .sheet b[data-m="tr"]::after,.sheet b[data-m="br"]::after{right:0}
-.sheet b[data-m="bl"]::before,.sheet b[data-m="br"]::before{bottom:0} .sheet b[data-m="bl"]::after,.sheet b[data-m="br"]::after{bottom:0}
-.sheet.hot b[data-m]::before,.sheet.hot b[data-m]::after{background:var(--cyan)}
+.sheet:not(.broken){cursor:pointer}
+.sheet.hot{background:var(--pink); border-color:var(--red); border-style:solid}
+.sheet.broken{cursor:default; border-color:var(--warn); border-style:solid}
+.sheet.broken .glyph{color:var(--warn)}
+.glyph{width:62px; height:62px; margin:0 auto 18px; display:block; color:var(--red);
+  background:var(--pink); border-radius:50%; padding:11px}
+.sheet.hot .glyph{background:var(--surface)}
+.sheet-title{font-family:var(--head); font-size:clamp(20px,2.8vw,26px); font-weight:600;
+  letter-spacing:-.015em; margin:0 0 20px; color:var(--dark)}
+.pick{
+  font-family:var(--head); font-size:16px; font-weight:600; letter-spacing:-.005em;
+  background:var(--red); color:#fff; border:0; border-radius:999px;
+  padding:0 32px; min-height:52px; cursor:pointer; box-shadow:0 6px 18px rgba(225,29,46,.22);
+}
+.pick:hover{background:var(--red-deep)}
+@media (prefers-color-scheme:dark){ .pick{background:#E11D2E; color:#fff} .pick:hover{background:#C2182A} }
+.sheet-sub{color:var(--gray-deep); font-size:14.5px; margin:16px 0 0}
+.touch-only{display:none}
+@media (hover:none){
+  .pointer-only{display:none}
+  .touch-only{display:block}
+  .pick{width:100%; max-width:330px}
+}
 
-.sheet-title{font-size:clamp(21px,3.4vw,27px); font-weight:700; font-stretch:110%; letter-spacing:-.02em; margin:0 0 6px}
-.sheet-sub{color:var(--muted); font-size:15px; margin:0}
-.sheet-sub u{color:var(--cyan); text-decoration-thickness:1px; text-underline-offset:3px}
-.glyph{width:44px; height:44px; margin:0 auto 16px; display:block; color:var(--cyan)}
-
-/* ---------- presets ---------- */
+/* ---------- settings ---------- */
 .controls{margin-top:22px; display:grid; gap:14px}
-.presets{border:0; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
-.presets legend{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+.presets{border:0; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.presets legend{font-family:var(--head); font-size:14px; font-weight:600; color:var(--dark); padding:0 0 9px}
 .opt{position:relative}
 .opt input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
 .opt span{
-  display:block; padding:11px 13px; border:1px solid var(--line); background:var(--paper);
-  border-radius:var(--r); cursor:pointer; transition:border-color .12s;
+  display:block; padding:13px 15px; border:1.5px solid var(--line-soft); background:var(--surface);
+  border-radius:var(--r); cursor:pointer; min-height:64px; transition:border-color .12s, background .12s;
 }
-.opt input:focus-visible + span{outline:3px solid var(--cyan); outline-offset:2px}
-.opt input:checked + span{border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink)}
-.opt strong{display:block; font-size:14.5px; font-weight:700; letter-spacing:-.01em}
-.opt em{display:block; font-style:normal; font-size:12.5px; color:var(--muted); margin-top:1px}
-.opt input:checked + span strong{color:var(--cyan)}
+.opt input:focus-visible + span{outline:3px solid var(--red); outline-offset:2px}
+.opt input:checked + span{border-color:var(--red); background:var(--pink-lite)}
+.opt strong{font-family:var(--head); display:block; font-size:14.5px; font-weight:600; color:var(--dark)}
+.opt em{display:block; font-style:normal; font-size:12.5px; color:var(--gray); margin-top:2px}
 
-.switches{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center}
-.sw{display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink-soft); cursor:pointer}
-.sw input{width:16px; height:16px; accent-color:var(--cyan); cursor:pointer; flex:none}
-.sw select{font:inherit; font-size:13.5px; color:var(--ink); background:var(--paper);
-  border:1px solid var(--line); border-radius:var(--r); padding:4px 7px; cursor:pointer; max-width:100%}
-.sw select:hover{border-color:var(--muted)}
+.switches{display:flex; flex-wrap:wrap; gap:4px 24px; align-items:center}
+.sw{display:flex; align-items:center; gap:9px; font-size:14px; color:var(--gray-deep); cursor:pointer; min-height:44px}
+.sw input{width:20px; height:20px; accent-color:var(--red); cursor:pointer; flex:none}
+.sw select{
+  font:inherit; font-size:13.5px; color:var(--dark); background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--rs);
+  padding:0 32px 0 12px; min-height:44px; cursor:pointer; max-width:100%;
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236B7280' stroke-width='1.8'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 11px center;
+}
+.sw select:hover{border-color:var(--red)}
 
 .privacy{
-  display:flex; gap:10px; align-items:flex-start; margin:24px 0 0;
-  font-size:14px; color:var(--ink-soft); border-left:2px solid var(--cyan); padding-left:13px;
+  display:flex; gap:11px; align-items:flex-start; margin:22px 0 0; padding:14px 16px;
+  font-size:14px; color:var(--gray-deep); background:var(--pink-lite); border-radius:var(--r);
 }
-.privacy svg{flex:none; margin-top:2px; color:var(--cyan)}
+.privacy svg{flex:none; margin-top:3px; color:var(--red)}
+.privacy b{font-weight:600; color:var(--dark)}
 
-/* ---------- tally ---------- */
-.results{padding-block:44px}
+/* ---------- reassurance strip ---------- */
+.feats{display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin:34px 0 0; padding:0; list-style:none}
+.feats li{text-align:center}
+.feats .ic{width:46px; height:46px; margin:0 auto 9px; display:grid; place-items:center;
+  background:var(--pink); border-radius:50%; color:var(--red)}
+.feats strong{font-family:var(--head); display:block; font-size:14px; font-weight:600; color:var(--dark)}
+.feats span{font-size:12.5px; color:var(--gray); line-height:1.45; display:block; margin-top:1px}
+
+/* ---------- results ---------- */
+.results{padding-block:44px 0}
 .results[hidden]{display:none}
-.tally{
-  display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 26px;
-  border-top:2px solid var(--ink); padding-top:14px; margin-bottom:4px;
-}
-.tally h2{font-size:15px; font-weight:700; margin:0; letter-spacing:-.01em; flex:1 1 auto}
-.big{font-size:clamp(28px,5.4vw,42px); font-weight:800; font-stretch:120%; letter-spacing:-.03em; line-height:1; color:var(--magenta)}
-.big small{font-size:14px; font-weight:600; font-stretch:100%; color:var(--muted); letter-spacing:0; margin-left:5px}
+.tally{border-top:2px solid var(--pink); padding-top:18px}
+.big{font-family:var(--head); font-size:clamp(38px,7.4vw,60px); font-weight:700;
+  letter-spacing:-.03em; line-height:1.05; color:var(--red); margin:0}
+.big small{font-family:var(--body); font-size:15px; font-weight:500; letter-spacing:0; color:var(--gray); margin-left:9px}
+.tally h2{font-family:var(--head); font-size:16px; font-weight:600; margin:8px 0 0; color:var(--dark)}
+.tally p.sub{font-size:14px; color:var(--gray); margin:3px 0 0}
+.tallyhead{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:10px 20px}
 .stopbtn{
-  background:var(--paper); border:1px solid var(--line); color:var(--ink); font:inherit; font-size:13px; font-weight:600;
-  padding:6px 12px; border-radius:var(--r); cursor:pointer;
+  font-family:var(--head); background:var(--surface); border:1.5px solid var(--line); color:var(--dark);
+  font-size:13.5px; font-weight:600; padding:0 18px; min-height:44px; border-radius:999px; cursor:pointer;
 }
-.stopbtn:hover{border-color:var(--ink)}
+.stopbtn:hover{border-color:var(--red); color:var(--red)}
+.hint{font-size:13.5px; color:var(--gray-deep); background:var(--pink-lite);
+  border-radius:var(--rs); padding:11px 14px; margin:16px 0 0}
 
-/* ---------- ledger rows ---------- */
-.rows{list-style:none; margin:0; padding:0}
-.row{display:grid; grid-template-columns:1fr auto; gap:4px 18px; padding:14px 0; border-bottom:1px solid var(--line-soft)}
-.name{font-size:15px; font-weight:600; overflow-wrap:anywhere; letter-spacing:-.01em}
-.sizes{font-size:14px; color:var(--ink-soft); white-space:nowrap; text-align:right}
-.sizes s{color:var(--muted); text-decoration:none}
-.sizes b{color:var(--ink); font-weight:700}
-.pct{color:var(--magenta); font-weight:700}
-.meter{grid-column:1/-1; height:5px; background:var(--line-soft); border-radius:3px; overflow:hidden; margin-top:3px}
-.meter i{display:block; height:100%; background:var(--cyan); border-radius:3px; width:100%; transform:scaleX(0); transform-origin:left center; transition:transform .35s ease}
-.row.done .meter i{background:var(--magenta)}
-.row.nogain .meter i{background:var(--line)}
-.row.failed .meter i{background:var(--line)}
-.note{grid-column:1/-1; font-size:13px; color:var(--muted); display:flex; align-items:center; gap:7px; flex-wrap:wrap}
-.note.err{color:var(--warn)} .note.ok{color:var(--ok)}
-.redo{background:none; border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12.5px; font-weight:600; padding:3px 9px; border-radius:var(--r); cursor:pointer}
-.redo:hover{border-color:var(--ink)}
+.rows{list-style:none; margin:20px 0 0; padding:0}
+.row{display:grid; grid-template-columns:1fr auto; gap:3px 18px; padding:14px 0; border-bottom:1px solid var(--line-soft)}
+.row:last-child{border-bottom:0}
+.name{font-size:15px; font-weight:600; overflow-wrap:anywhere; color:var(--dark)}
+.sizes{font-size:14px; color:var(--gray-deep); white-space:nowrap; text-align:right}
+.sizes s{color:var(--gray); text-decoration:none}
+.sizes b{color:var(--dark); font-weight:700}
+.pct{color:var(--red); font-weight:700}
+@media (prefers-color-scheme:light){ .pct{color:var(--red-deep)} }
+.meter{grid-column:1/-1; height:7px; background:var(--pink); border-radius:4px; overflow:hidden; margin-top:5px}
+.meter i{display:block; height:100%; width:100%; background:var(--red); border-radius:4px;
+  transform:scaleX(0); transform-origin:left center; transition:transform .35s ease}
+.row.nogain .meter,.row.failed .meter{display:none}
+.note{grid-column:1/-1; font-size:13.5px; color:var(--gray); display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:3px}
+.note.err{color:var(--warn)} .note.ok{color:var(--gray-deep)}
+.redo{
+  font-family:var(--head); background:var(--surface); border:1.5px solid var(--line-soft); color:var(--dark);
+  font-size:13px; font-weight:600; padding:0 14px; min-height:38px; border-radius:999px; cursor:pointer;
+}
+.redo:hover{border-color:var(--red); color:var(--red)}
 
-/* ---------- explain ---------- */
-.explain{padding-block:20px 72px; border-top:1px solid var(--line); margin-top:34px}
-.explain h2{font-size:20px; font-weight:800; font-stretch:112%; letter-spacing:-.02em; margin:26px 0 10px}
-.explain h3{font-size:15px; font-weight:700; margin:20px 0 4px}
-.explain p{color:var(--ink-soft); max-width:68ch; margin:0 0 10px; font-size:15px}
-.explain ul{color:var(--ink-soft); max-width:68ch; font-size:15px; padding-left:19px; margin:0 0 10px}
-.explain li{margin-bottom:5px}
-.explain code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; background:var(--paper); border:1px solid var(--line-soft); padding:1px 5px; border-radius:3px}
-table{border-collapse:collapse; width:100%; max-width:560px; font-size:14.5px; margin:6px 0 14px}
-th,td{text-align:left; padding:8px 12px 8px 0; border-bottom:1px solid var(--line-soft)}
+/* ---------- explainer ---------- */
+.explain{padding-block:34px 60px; border-top:1px solid var(--line-soft); margin-top:56px}
+.explain > *{max-width:640px}
+.explain h2{font-size:22px; font-weight:600; letter-spacing:-.02em; margin:0 0 12px; color:var(--dark)}
+.explain h3{font-size:15.5px; font-weight:600; margin:26px 0 5px; color:var(--dark)}
+.explain p{color:var(--gray); margin:0 0 11px; font-size:15px}
+.explain ul{color:var(--gray); font-size:15px; padding-left:20px; margin:0 0 11px}
+.explain li{margin-bottom:6px}
+table{border-collapse:collapse; width:100%; font-size:14.5px; margin:8px 0 14px}
+th,td{text-align:left; padding:9px 0; border-bottom:1px solid var(--line-soft); color:var(--gray)}
 th+th,td+td{padding-left:14px}
-th{font-weight:700; font-size:13px}
-td:not(:first-child),th:not(:first-child){text-align:right; padding-right:0}
-.foot{color:var(--muted); font-size:13.5px; padding-bottom:40px}
-.foot a{color:var(--muted)}
+th{font-family:var(--head); font-weight:600; font-size:13px; color:var(--dark)}
+td:not(:first-child),th:not(:first-child){text-align:right}
+td:first-child{color:var(--dark); font-weight:500}
+.foot{color:var(--gray); font-size:13.5px; padding-bottom:44px; max-width:640px}
+.foot a{color:var(--red)}
+.foot .sig{display:block; font-size:11px; font-weight:600; letter-spacing:.14em; color:var(--gray); margin-top:10px}
 
+@media (max-width:720px){ .feats{grid-template-columns:repeat(2,1fr); gap:22px 14px} }
 @media (max-width:640px){
-  .stage{padding-block:34px 16px}
   .presets{grid-template-columns:1fr}
+  .opt span{min-height:0}
   .row{grid-template-columns:1fr}
   .sizes{text-align:left; white-space:normal}
   table{font-size:13.5px}
-  th,td{padding-right:0}
-  .bar{flex-wrap:wrap}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
 </style>
@@ -179,7 +219,13 @@ td:not(:first-child),th:not(:first-child){text-align:right; padding-right:0}
 
 <div class="wrap">
   <header class="bar">
-    <div class="mark"><i></i>Prensa</div>
+    <a class="brand" href="./">
+      <img src="icon-192.png" width="42" height="42" alt="">
+      <span>
+        <span class="nm">Maria’s <i>PDF</i> Reduce</span>
+        <span class="tag" data-i18n="tagline">SAME QUALITY. SMALLER FILES.</span>
+      </span>
+    </a>
     <nav>
       <a class="ghost" href="#how" data-i18n="nav.how">How it works</a>
       <div class="lang" role="group" aria-label="Language">
@@ -191,86 +237,114 @@ td:not(:first-child),th:not(:first-child){text-align:right; padding-right:0}
 
   <main>
     <section class="stage">
-      <h1 data-i18n="hero.title">Heavy PDFs,<br>pressed thin.</h1>
-      <p class="lede" data-i18n="hero.lede">Scanned documents are usually fat for one silly reason: the scanner saved photographs in a format built for line art. Prensa fixes that. Same pages, same resolution, and typically 90% less weight.</p>
+      <h1 data-i18n="hero.title">Make PDFs smaller.<br>Keep what matters.</h1>
+      <p class="lede" data-i18n="hero.lede">Fast, easy and secure PDF compression for your documents. Scans from your phone come out about 10 times smaller, with the same pages at the same resolution.</p>
 
-      <div class="sheet" id="drop" role="button" tabindex="0" aria-describedby="drophint">
-        <b data-m="tl"></b><b data-m="tr"></b><b data-m="bl"></b><b data-m="br"></b>
-        <svg class="glyph" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M10 6h18l10 10v12"/><path d="M28 6v10h10"/>
-          <path d="M10 6v26"/><path d="M6 34h36"/><path d="M12 42h24"/><path d="M24 22v9m0 0 4-4m-4 4-4-4"/>
+      <div class="sheet" id="drop">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 9V5a1 1 0 0 1 1-1h4"/><path d="M20 9V5a1 1 0 0 0-1-1h-4"/>
+          <path d="M4 15v4a1 1 0 0 0 1 1h4"/><path d="M20 15v4a1 1 0 0 1-1 1h-4"/>
+          <path d="M9 12h6"/><path d="M12 9l-3 3 3 3"/><path d="M12 9l3 3-3 3"/>
         </svg>
-        <p class="sheet-title" data-i18n="drop.title">Drop PDFs here</p>
-        <p class="sheet-sub" id="drophint" data-i18n="drop.sub">or <u>choose files</u>. As many as you like, folders too</p>
+        <p class="sheet-title">
+          <span class="pointer-only" data-i18n="drop.title">Drop your PDFs here</span>
+          <span class="touch-only" data-i18n="drop.titleTouch">Choose your PDFs</span>
+        </p>
+        <button type="button" class="pick" id="pick" data-i18n="drop.btn">Choose PDF files</button>
+        <p class="sheet-sub" data-i18n="drop.sub">Any number of files, folders too. Nothing is uploaded.</p>
       </div>
-      <input type="file" id="picker" accept="application/pdf,.pdf" multiple hidden>
+      <input type="file" id="picker" accept="application/pdf,.pdf" multiple hidden aria-hidden="true" tabindex="-1">
 
       <div class="controls">
         <fieldset class="presets">
-          <legend data-i18n="preset.legend">Compression strength</legend>
+          <legend data-i18n="preset.legend">How small should they be?</legend>
           <label class="opt">
-            <input type="radio" name="q" value="0.92" data-tag="archive">
-            <span><strong data-i18n="preset.a.t">Archive</strong><em data-i18n="preset.a.s">~5× lighter, no visible change</em></span>
+            <input type="radio" name="q" value="0.92" data-tag="quality">
+            <span><strong data-i18n="preset.a.t">Highest quality</strong><em data-i18n="preset.a.s">About 5× smaller</em></span>
           </label>
           <label class="opt">
-            <input type="radio" name="q" value="0.76" checked data-tag="balanced">
-            <span><strong data-i18n="preset.b.t">Balanced</strong><em data-i18n="preset.b.s">~12× lighter. Recommended</em></span>
+            <input type="radio" name="q" value="0.76" checked data-tag="email">
+            <span><strong data-i18n="preset.b.t">Best for email</strong><em data-i18n="preset.b.s">About 12× smaller. Recommended</em></span>
           </label>
           <label class="opt">
             <input type="radio" name="q" value="0.60" data-tag="smallest">
-            <span><strong data-i18n="preset.c.t">Smallest</strong><em data-i18n="preset.c.s">~18× lighter, softer detail</em></span>
+            <span><strong data-i18n="preset.c.t">Smallest</strong><em data-i18n="preset.c.s">About 18× smaller</em></span>
           </label>
         </fieldset>
 
         <div class="switches">
-          <label class="sw"><input type="checkbox" id="auto" checked><span data-i18n="sw.auto">Save each file the moment it is done</span></label>
+          <label class="sw"><input type="checkbox" id="auto" checked><span data-i18n="sw.auto">Save each file as soon as it is ready</span></label>
           <label class="sw" for="naming"><span data-i18n="sw.name">Saved as</span>
             <select id="naming">
-              <option value="tag" selected>nombre-compressed.pdf</option>
-              <option value="preset">nombre-compressed-balanced.pdf</option>
-              <option value="same" data-i18n="sw.same">the same name as the original</option>
+              <option value="tag" selected>filename-compressed.pdf</option>
+              <option value="preset">filename-compressed-email.pdf</option>
+              <option value="same" data-i18n="sw.same">the same name (a separate copy)</option>
             </select>
           </label>
         </div>
       </div>
 
       <p class="privacy">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span data-i18n="privacy">Your files never leave this device. There is no server. The pressing happens inside your browser, so private documents stay private. You can even unplug from the internet once the page has loaded.</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span data-i18n="privacy"><b>Free, and your files never leave this device.</b> There is no server. All the work happens inside your browser, so private documents stay private, and your original files are never changed. You always get a new copy.</span>
       </p>
+
+      <ul class="feats">
+        <li>
+          <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h6"/><path d="M20 12h-6"/><path d="M7 9l3 3-3 3"/><path d="M17 9l-3 3 3 3"/></svg></span>
+          <strong data-i18n="f1.t">Compress</strong><span data-i18n="f1.s">Up to 18× smaller</span>
+        </li>
+        <li>
+          <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <strong data-i18n="f2.t">Secure</strong><span data-i18n="f2.s">Nothing is uploaded</span>
+        </li>
+        <li>
+          <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>
+          <strong data-i18n="f3.t">Fast</strong><span data-i18n="f3.s">Seconds per file</span>
+        </li>
+        <li>
+          <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></span>
+          <strong data-i18n="f4.t">Easy to use</strong><span data-i18n="f4.s">Same pages, same quality</span>
+        </li>
+      </ul>
     </section>
 
-    <section class="results" id="results" hidden aria-live="polite">
+    <section class="results" id="results" hidden>
       <div class="tally">
-        <h2 id="tallyLabel" data-i18n="tally.working">Pressing…</h2>
-        <div class="big" id="saved">0 MB<small data-i18n="tally.saved">saved</small></div>
-        <button class="stopbtn" id="stop" type="button" data-i18n="tally.stop">Stop</button>
+        <div class="tallyhead">
+          <div>
+            <p class="big" id="saved">&nbsp;</p>
+            <h2 id="tallyLabel">&nbsp;</h2>
+            <p class="sub" id="tallySub"></p>
+          </div>
+          <button class="stopbtn" id="stop" type="button" data-i18n="tally.stop">Stop</button>
+        </div>
+        <p class="hint" id="dlhint" hidden data-i18n="hint.multi">Your browser may ask permission to save several files. Choose Allow.</p>
       </div>
       <ul class="rows" id="rows"></ul>
     </section>
+    <p class="sr-only" role="status" aria-live="polite" id="status"></p>
 
     <section class="explain" id="how">
-      <h2 data-i18n="how.h">What Prensa actually does</h2>
+      <h2 data-i18n="how.h">How it works</h2>
       <p data-i18n="how.p1">When you scan a document with a phone, each page is saved as a photograph. Many scanners then store that photograph using Flate, a lossless method designed for flat graphics and text, not for photographs of paper. A single page can eat 9 MB that way.</p>
-      <p data-i18n="how.p2">Prensa re-encodes those page photographs as JPEG, the format built for exactly this kind of image, and leaves everything else in the file untouched. Page count, page size, text layers and the pixel dimensions of every image stay exactly as they were. Nothing is ever scaled down.</p>
+      <p data-i18n="how.p2">Your page photographs are re-encoded as JPEG, the format built for exactly this kind of image, and everything else in the file is left untouched. Page count, page size, text layers and the pixel dimensions of every image stay exactly as they were. Nothing is ever scaled down.</p>
+      <p data-i18n="how.p3">Measured on a real batch of 20 phone-scanned legal documents: 602 MB became 48 MB on Best for email, with text still crisp enough to read at full zoom.</p>
 
       <h3 data-i18n="how.h2">What you get</h3>
       <table>
         <thead><tr><th data-i18n="tbl.set">Setting</th><th data-i18n="tbl.typ">Typical result</th><th data-i18n="tbl.q">Quality</th></tr></thead>
         <tbody>
-          <tr><td data-i18n="preset.a.t">Archive</td><td>~19%</td><td data-i18n="tbl.q1">Visually identical</td></tr>
-          <tr><td data-i18n="preset.b.t">Balanced</td><td>~8%</td><td data-i18n="tbl.q2">Identical when read or printed</td></tr>
-          <tr><td data-i18n="preset.c.t">Smallest</td><td>~5%</td><td data-i18n="tbl.q3">Slight softening up close</td></tr>
+          <tr><td data-i18n="preset.a.t">Highest quality</td><td data-i18n="tbl.r1">About 5× smaller</td><td data-i18n="tbl.q1">Looks identical</td></tr>
+          <tr><td data-i18n="preset.b.t">Best for email</td><td data-i18n="tbl.r2">About 12× smaller</td><td data-i18n="tbl.q2">Identical when read or printed</td></tr>
+          <tr><td data-i18n="preset.c.t">Smallest</td><td data-i18n="tbl.r3">About 18× smaller</td><td data-i18n="tbl.q3">Slight softening up close</td></tr>
         </tbody>
       </table>
-      <p data-i18n="how.p3">Measured on a real batch of 20 phone-scanned legal documents: 602 MB became 48 MB on Balanced, with text still crisp enough to read at full zoom.</p>
 
       <h3 data-i18n="how.h3">Honest limits</h3>
       <ul>
         <li data-i18n="how.l1">JPEG is lossy. Nothing here is bit-for-bit identical to your original, so keep your originals if a file may ever need to serve as legal or evidentiary proof.</li>
-        <li data-i18n="how.l2">A PDF that is mostly real text rather than scans is already small, and Prensa will tell you it could not improve it rather than hand you a worse file.</li>
-        <li data-i18n="how.l3">Prensa never returns a file bigger than the one you gave it.</li>
-        <li data-i18n="how.l4">Password-protected PDFs are skipped.</li>
+        <li data-i18n="how.l3">You never get back a file bigger than the one you gave. If it cannot help, it says so and leaves the file alone.</li>
       </ul>
 
       <h3 data-i18n="how.h4">If your browser asks about multiple downloads</h3>
@@ -278,8 +352,9 @@ td:not(:first-child),th:not(:first-child){text-align:right; padding-right:0}
     </section>
 
     <p class="foot">
-      <span data-i18n="foot">Prensa runs entirely in your browser. No accounts, no uploads, no tracking.</span>
-      <a href="https://github.com/jimbodakilla/prensa" data-i18n="foot.src">Source on GitHub</a>
+      <span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
+      <a href="https://github.com/jimbodakilla/maria-pdf-reduce" data-i18n="foot.src">Source on GitHub</a>
+      <span class="sig" data-i18n="tagline">SAME QUALITY. SMALLER FILES.</span>
     </p>
   </main>
 </div>
@@ -293,46 +368,74 @@ td:not(:first-child),th:not(:first-child){text-align:right; padding-right:0}
 /* ============================ i18n ============================ */
 const ES = {
   "nav.how":"Cómo funciona",
-  "hero.title":"PDFs pesados,<br>prensados finos.",
-  "hero.lede":"Los documentos escaneados engordan por una razón tonta: el escáner guarda fotografías en un formato hecho para dibujos de línea. Prensa lo corrige. Las mismas páginas, la misma resolución y normalmente 90% menos peso.",
-  "drop.title":"Suelta los PDFs aquí",
-  "drop.sub":"o <u>elige archivos</u>. Los que quieras, también carpetas",
-  "preset.legend":"Fuerza de compresión",
-  "preset.a.t":"Archivo","preset.a.s":"~5× más liviano, sin cambio visible",
-  "preset.b.t":"Equilibrado","preset.b.s":"~12× más liviano. Recomendado",
-  "preset.c.t":"Mínimo","preset.c.s":"~18× más liviano, detalle más suave",
+  "tagline":"MISMA CALIDAD. ARCHIVOS MÁS PEQUEÑOS.",
+  "hero.title":"Haz tus PDFs más pequeños.<br>Conserva lo que importa.",
+  "hero.lede":"Compresión de PDF rápida, fácil y segura para tus documentos. Los escaneos del teléfono quedan unas 10 veces más pequeños, con las mismas páginas y la misma resolución.",
+  "drop.title":"Suelta aquí tus PDFs","drop.titleTouch":"Elige tus PDFs","drop.btn":"Elegir archivos PDF",
+  "f1.t":"Comprime","f1.s":"Hasta 18× más pequeño",
+  "f2.t":"Seguro","f2.s":"No se sube nada",
+  "f3.t":"Rápido","f3.s":"Segundos por archivo",
+  "f4.t":"Fácil de usar","f4.s":"Mismas páginas, misma calidad",
+  "drop.sub":"Todos los archivos que quieras, también carpetas. No se sube nada.",
+  "preset.legend":"¿Qué tan pequeños los quieres?",
+  "preset.a.t":"Máxima calidad","preset.a.s":"Unas 5× más pequeño",
+  "preset.b.t":"Ideal para correo","preset.b.s":"Unas 12× más pequeño. Recomendado",
+  "preset.c.t":"Lo más pequeño","preset.c.s":"Unas 18× más pequeño",
   "sw.auto":"Guardar cada archivo apenas esté listo",
-  "sw.name":"Guardar como","sw.same":"el mismo nombre del original",
-  "privacy":"Tus archivos nunca salen de este equipo. No hay servidor. El prensado ocurre dentro de tu navegador, así que los documentos privados siguen siendo privados. Puedes incluso desconectarte de internet una vez cargada la página.",
-  "tally.working":"Prensando…","tally.saved":"ahorrados","tally.stop":"Detener","tally.done":"Listo",
-  "how.h":"Qué hace Prensa en realidad",
+  "sw.name":"Guardar como","sw.same":"el mismo nombre (una copia aparte)",
+  "privacy":"<b>Gratis, y tus archivos nunca salen de este equipo.</b> No hay servidor. Todo el trabajo ocurre dentro de tu navegador, así que los documentos privados siguen siendo privados y tus archivos originales nunca se modifican. Siempre recibes una copia nueva.",
+  "tally.stop":"Detener",
+  "hint.multi":"Puede que tu navegador pida permiso para guardar varios archivos. Elige Permitir.",
+  "how.h":"Cómo funciona",
   "how.p1":"Cuando escaneas un documento con el teléfono, cada página se guarda como una fotografía. Muchos escáneres almacenan esa fotografía con Flate, un método sin pérdida diseñado para gráficos planos y texto, no para fotos de papel. Así una sola página puede comerse 9 MB.",
-  "how.p2":"Prensa vuelve a codificar esas fotografías como JPEG, el formato hecho justamente para este tipo de imagen, y deja intacto todo lo demás del archivo. El número de páginas, el tamaño de página, las capas de texto y las dimensiones en píxeles de cada imagen quedan exactamente igual. Nada se reduce de tamaño.",
+  "how.p2":"Tus fotografías de página se vuelven a codificar como JPEG, el formato hecho justamente para este tipo de imagen, y deja intacto todo lo demás del archivo. El número de páginas, el tamaño de página, las capas de texto y las dimensiones en píxeles de cada imagen quedan exactamente igual. Nada se reduce de tamaño.",
+  "how.p3":"Medido sobre un lote real de 20 documentos legales escaneados con teléfono: 602 MB pasaron a 48 MB con Ideal para correo, con el texto aún nítido a todo zoom.",
   "how.h2":"Qué obtienes","tbl.set":"Ajuste","tbl.typ":"Resultado típico","tbl.q":"Calidad",
-  "tbl.q1":"Visualmente idéntico","tbl.q2":"Idéntico al leer o imprimir","tbl.q3":"Ligera suavidad de cerca",
-  "how.p3":"Medido sobre un lote real de 20 documentos legales escaneados con teléfono: 602 MB pasaron a 48 MB en Equilibrado, con el texto aún nítido a todo zoom.",
+  "tbl.r1":"Unas 5× más pequeño","tbl.r2":"Unas 12× más pequeño","tbl.r3":"Unas 18× más pequeño",
+  "tbl.q1":"Se ve idéntico","tbl.q2":"Idéntico al leer o imprimir","tbl.q3":"Ligera suavidad de cerca",
   "how.h3":"Límites honestos",
   "how.l1":"JPEG tiene pérdida. Nada aquí es idéntico bit a bit a tu original, así que conserva los originales si un archivo alguna vez debe servir como prueba legal.",
-  "how.l2":"Un PDF hecho sobre todo de texto real y no de escaneos ya es pequeño, y Prensa te dirá que no pudo mejorarlo en vez de entregarte un archivo peor.",
-  "how.l3":"Prensa nunca devuelve un archivo más grande que el que le diste.",
-  "how.l4":"Los PDFs protegidos con contraseña se omiten.",
+  "how.l3":"Nunca recibes un archivo más grande que el que entregaste. Si no puede ayudar, lo dice y deja el archivo tal cual.",
   "how.h4":"Si tu navegador pregunta por descargas múltiples",
   "how.p4":"Guardar un lote significa guardar muchos archivos seguidos, y los navegadores piden permiso la primera vez. Elige Permitir y el resto del lote llegará solo a tu carpeta de descargas. Si no ves el aviso, cada fila terminada conserva un botón para guardar.",
-  "foot":"Prensa funciona por completo en tu navegador. Sin cuentas, sin subidas, sin rastreo.",
+  "foot":"Funciona por completo en tu navegador. Sin cuentas, sin subidas, sin rastreo.",
   "foot.src":"Código en GitHub",
-  // runtime strings
-  "r.reading":"leyendo","r.pressing":"prensando","r.saved":"guardado en descargas","r.ready":"listo",
-  "r.save":"Guardar","r.queued":"en cola","r.nogain":"Ya está lo más pequeño posible. Nada que guardar.",
-  "r.encrypted":"PDF protegido con contraseña. Omitido.","r.broken":"No se pudo leer este PDF",
-  "r.notpdf":"No es un PDF. Omitido.","r.stopped":"detenido",
-  "r.files":"archivos","r.file":"archivo","r.of":"de","r.skippedn":"omitidos"
+  "r.reading":"leyendo…","r.pressing":"haciéndolo más pequeño…","r.queued":"en espera",
+  "r.sent":"Enviado a tu carpeta de descargas","r.ready":"Listo para guardar","r.save":"Guardar",
+  "r.saveagain":"Guardar otra vez",
+  "r.nogain":"Ya está lo más pequeño posible. No hay nada que guardar.",
+  "r.toobig":"Algunas páginas son demasiado grandes para este navegador. Prueba en una computadora.",
+  "r.alreadyjpg":"Sus páginas ya son JPEG. Prueba con Ideal para correo o Lo más pequeño.",
+  "r.encrypted":"Este PDF está protegido con contraseña, así que no se puede abrir. Quítale la contraseña y vuelve a soltarlo.",
+  "r.broken":"No se pudo leer este PDF. Puede estar dañado.",
+  "r.notpdf":"No es un PDF, no se agregó.",
+  "r.onlypdf":"Maria’s PDF Reduce solo funciona con archivos PDF.",
+  "r.stopped":"Detenido antes de empezar","r.stoppedAll":"Detenido. No se cambió nada.",
+  "r.working":"Haciendo más pequeños {n} archivos…","r.progress":"{d} de {n} listos",
+  "r.finished":"Listo.","r.inDownloads":"{n} archivos más pequeños están en tu carpeta de descargas.",
+  "r.inDownloads1":"1 archivo más pequeño está en tu carpeta de descargas.",
+  "r.leftAlone":"{n} se dejaron tal cual, mira abajo.","r.leftAlone1":"1 se dejó tal cual, mira abajo.",
+  "r.savedLabel":"ahorrados","r.savedLine":"ahorrados, {p}% más pequeño","r.none":"No se pudo hacer más pequeño ningún archivo.",
+  "r.under":"menos de 1 KB"
 };
 const EN = {
-  "r.reading":"reading","r.pressing":"pressing","r.saved":"saved to downloads","r.ready":"ready",
-  "r.save":"Save","r.queued":"queued","r.nogain":"Already as small as it gets. Nothing to save.",
-  "r.encrypted":"Password-protected PDF. Skipped.","r.broken":"Could not read this PDF",
-  "r.notpdf":"Not a PDF. Skipped.","r.stopped":"stopped",
-  "r.files":"files","r.file":"file","r.of":"of","r.skippedn":"skipped","tally.done":"Done"
+  "r.reading":"reading…","r.pressing":"making it smaller…","r.queued":"waiting",
+  "r.sent":"Sent to your Downloads folder","r.ready":"Ready to save","r.save":"Save",
+  "r.saveagain":"Save again",
+  "r.nogain":"Already as small as it gets. Nothing to save.",
+  "r.toobig":"Some pages are too large for this browser. Try again on a computer.",
+  "r.alreadyjpg":"Its pages are already JPEG. Try Best for email or Smallest.",
+  "r.encrypted":"This PDF is locked with a password, so it cannot be opened. Remove the password and drop it again.",
+  "r.broken":"Could not read this PDF. It may be damaged.",
+  "r.notpdf":"Not a PDF, so it was not added.",
+  "r.onlypdf":"Maria’s PDF Reduce only works on PDF files.",
+  "r.stopped":"Stopped before it started","r.stoppedAll":"Stopped. Nothing was changed.",
+  "r.working":"Making {n} files smaller…","r.progress":"{d} of {n} done",
+  "r.finished":"Finished.","r.inDownloads":"{n} smaller files are in your Downloads folder.",
+  "r.inDownloads1":"1 smaller file is in your Downloads folder.",
+  "r.leftAlone":"{n} were left as they are, see below.","r.leftAlone1":"1 was left as it is, see below.",
+  "r.savedLabel":"saved","r.savedLine":"saved, {p}% smaller","r.none":"No files could be made smaller.",
+  "r.under":"under 1 KB"
 };
 let lang = "en";
 const EN_CACHE = {};
@@ -340,34 +443,55 @@ document.querySelectorAll("[data-i18n]").forEach(el => {
   const k = el.getAttribute("data-i18n");
   if (EN_CACHE[k] === undefined) EN_CACHE[k] = el.innerHTML;
 });
-function t(key){
-  if (lang === "es" && ES[key]) return ES[key];
-  if (EN[key]) return EN[key];
-  return EN_CACHE[key] !== undefined ? EN_CACHE[key] : key;
+function t(key, vars){
+  let v = (lang === "es" && ES[key]) || EN[key];
+  if (v === undefined) v = EN_CACHE[key] !== undefined ? EN_CACHE[key] : key;
+  if (vars) for (const k in vars) v = v.replace("{" + k + "}", vars[k]);
+  return v;
 }
+let refreshNamingHints = null, redrawStatic = null;
 function applyLang(next){
   lang = next;
   document.documentElement.lang = next;
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const k = el.getAttribute("data-i18n");
-    if (EN_CACHE[k] === undefined) EN_CACHE[k] = el.innerHTML;
     el.innerHTML = (next === "es" && ES[k]) ? ES[k] : EN_CACHE[k];
   });
   document.querySelectorAll(".lang button").forEach(b =>
     b.setAttribute("aria-pressed", String(b.dataset.lang === next)));
   try { localStorage.setItem("prensa.lang", next); } catch (e) {}
-  if (typeof refreshNamingHints === "function") refreshNamingHints();
-  redrawStatic();
+  if (refreshNamingHints) refreshNamingHints();
+  if (redrawStatic) redrawStatic();
 }
 document.querySelectorAll(".lang button").forEach(b =>
   b.addEventListener("click", () => applyLang(b.dataset.lang)));
+try {
+  const stored = localStorage.getItem("prensa.lang");
+  if (stored === "es" || stored === "en") applyLang(stored);
+  else if ((navigator.language || "").toLowerCase().startsWith("es")) applyLang("es");
+} catch (e) {}
+
+/* The tool is useless without these two libraries. On a restricted network they are
+   blocked, and without this guard every drop would silently do nothing forever. */
+if (typeof PDFLib === "undefined" || typeof pako === "undefined"){
+  const sheet = document.getElementById("drop");
+  sheet.classList.add("broken");
+  sheet.querySelector(".glyph").innerHTML = '<path d="M24 6 4 42h40L24 6z"/><path d="M24 20v10"/><path d="M24 35h.02"/>';
+  sheet.querySelector(".sheet-title").textContent =
+    lang === "es" ? "Maria’s PDF Reduce no pudo cargar" : "Maria’s PDF Reduce could not load";
+  const pk = document.getElementById("pick"); if (pk) pk.remove();
+  sheet.querySelector(".sheet-sub").textContent = lang === "es"
+    ? "Falta una parte del programa, normalmente porque la red bloquea cdnjs.cloudflare.com. Prueba en otra red o pide a tu equipo de IT que permita ese dominio."
+    : "Part of the program is missing, usually because the network blocks cdnjs.cloudflare.com. Try another network, or ask your IT team to allow that domain.";
+  return;
+}
 
 /* ============================ helpers ============================ */
 const $ = s => document.querySelector(s);
 const { PDFDocument, PDFName, PDFDict, PDFArray, PDFNumber, PDFRawStream, PDFRef } = PDFLib;
 
 const mb = n => n >= 9.95e5 ? (n/1e6).toFixed(n >= 9.95e6 ? 0 : 1) + " MB"
-              : n >= 1e3 ? Math.round(n/1e3) + " KB" : n + " B";
+              : n >= 1e3 ? Math.round(n/1e3) + " KB" : t("r.under");
 const yieldUI = () => new Promise(r => setTimeout(r, 0));
 
 function lookup(ctx, o){
@@ -377,14 +501,13 @@ function lookup(ctx, o){
 }
 function nameOf(o){ return (o && typeof o.asString === "function") ? o.asString() : null; }
 
-/* Components per pixel for a colour space, or 0 if we should not touch it. */
 function csComponents(ctx, cs){
   cs = lookup(ctx, cs);
   const n = nameOf(cs);
   if (n){
     if (n === "/DeviceRGB" || n === "/CalRGB" || n === "/RGB") return 3;
     if (n === "/DeviceGray" || n === "/CalGray" || n === "/G") return 1;
-    return 0;                                   // CMYK and friends: leave alone
+    return 0;
   }
   if (cs instanceof PDFArray){
     const head = nameOf(lookup(ctx, cs.get(0)));
@@ -396,15 +519,14 @@ function csComponents(ctx, cs){
     }
     if (head === "/CalRGB") return 3;
     if (head === "/CalGray") return 1;
-    return 0;                                   // Indexed / Separation / DeviceN
+    return 0;
   }
   return 0;
 }
 
-/* PNG predictors (Flate images sometimes use them). Returns null if unsupported. */
 function unpredict(data, predictor, colors, bpc, columns){
   if (predictor < 2) return data;
-  if (predictor === 2) return null;             // TIFF predictor: rare, skip
+  if (predictor === 2) return null;
   const bpp = Math.max(1, Math.ceil(colors * bpc / 8));
   const rowLen = Math.ceil(colors * bpc * columns / 8);
   const stride = rowLen + 1;
@@ -430,14 +552,14 @@ function unpredict(data, predictor, colors, bpc, columns){
   return out;
 }
 
-/* Canvas guard — browsers refuse enormous canvases. */
-const MAXPX = 80e6;
+/* Safari caps canvas area near 16.7 Mpx. Above that toBlob returns null, and the page
+   would be silently reported as "already small". Stay under the lowest common limit. */
+const MAXPX = 16.5e6;
 let cv = null;
 function encodeJpeg(imageData, w, h, q){
   if (!cv) cv = document.createElement("canvas");
   cv.width = w; cv.height = h;
-  const c = cv.getContext("2d");
-  c.putImageData(imageData, 0, 0);
+  cv.getContext("2d").putImageData(imageData, 0, 0);
   return new Promise(res => cv.toBlob(res, "image/jpeg", q));
 }
 function rgbaFrom(raw, w, h, comps){
@@ -453,7 +575,7 @@ function rgbaFrom(raw, w, h, comps){
 }
 
 /* ============================ the press ============================ */
-async function press(bytes, quality, onStep){
+async function press(bytes, quality, onStep, shouldStop){
   let doc;
   try {
     doc = await PDFDocument.load(bytes, { ignoreEncryption:true, throwOnInvalidObject:false, updateMetadata:false });
@@ -466,13 +588,15 @@ async function press(bytes, quality, onStep){
   const targets = [];
   for (const [ref, obj] of ctx.enumerateIndirectObjects()){
     if (!(obj instanceof PDFRawStream)) continue;
-    const d = obj.dict;
-    if (nameOf(lookup(ctx, d.get(PDFName.of("Subtype")))) !== "/Image") continue;
+    if (nameOf(lookup(ctx, obj.dict.get(PDFName.of("Subtype")))) !== "/Image") continue;
     targets.push([ref, obj]);
   }
 
   let changed = 0;
+  const why = { tooBig:0, alreadyJpeg:0, other:0 };
+
   for (let i = 0; i < targets.length; i++){
+    if (shouldStop && shouldStop()) throw new Error("stopped");
     const [ref, img] = targets[i];
     onStep(i / Math.max(1, targets.length));
     await yieldUI();
@@ -481,39 +605,39 @@ async function press(bytes, quality, onStep){
       const get = k => lookup(ctx, d.get(PDFName.of(k)));
       const numOf = k => { const v = get(k); return v && typeof v.asNumber === "function" ? v.asNumber() : null; };
 
-      if (get("ImageMask")) continue;                        // stencil mask
+      if (get("ImageMask")) { why.other++; continue; }
       const w = numOf("Width"), h = numOf("Height");
-      if (!w || !h || w * h > MAXPX) continue;
+      if (!w || !h) { why.other++; continue; }
+      if (w * h > MAXPX) { why.tooBig++; continue; }
 
       const filt = get("Filter");
       const filters = filt instanceof PDFArray
         ? filt.asArray().map(x => nameOf(lookup(ctx, x)))
         : [nameOf(filt)];
-      if (filters.length !== 1) continue;                    // chained filters: leave alone
+      if (filters.length !== 1) { why.other++; continue; }
       const f = filters[0];
 
       const origBytes = img.contents ? img.contents.length : 0;
-      if (origBytes < 6000) continue;                        // too small to be worth it
+      if (origBytes < 6000) continue;
 
       let imageData = null, keepCS = null;
 
       if (f === "/DCTDecode"){
-        // Already JPEG. Only worth redoing at strong settings.
-        if (quality > 0.8) continue;
+        if (quality > 0.8) { why.alreadyJpeg++; continue; }
         const bmp = await createImageBitmap(new Blob([img.contents], { type:"image/jpeg" }));
         if (!cv) cv = document.createElement("canvas");
         cv.width = bmp.width; cv.height = bmp.height;
         const c2 = cv.getContext("2d");
         c2.drawImage(bmp, 0, 0);
         imageData = c2.getImageData(0, 0, bmp.width, bmp.height);
-        bmp.close && bmp.close();
+        if (bmp.close) bmp.close();
       } else if (f === "/FlateDecode"){
-        if (numOf("BitsPerComponent") !== 8) continue;
+        if (numOf("BitsPerComponent") !== 8) { why.other++; continue; }
         const comps = csComponents(ctx, d.get(PDFName.of("ColorSpace")));
-        if (!comps) continue;
-        if (get("Decode")) continue;                          // inverted maps: leave alone
+        if (!comps) { why.other++; continue; }
+        if (get("Decode")) { why.other++; continue; }
         let raw;
-        try { raw = pako.inflate(img.contents); } catch (e){ continue; }
+        try { raw = pako.inflate(img.contents); } catch (e){ why.other++; continue; }
         const dp = get("DecodeParms");
         if (dp instanceof PDFDict){
           const p = lookup(ctx, dp.get(PDFName.of("Predictor")));
@@ -522,18 +646,19 @@ async function press(bytes, quality, onStep){
             const colours = (() => { const c = lookup(ctx, dp.get(PDFName.of("Colors"))); return c ? c.asNumber() : comps; })();
             const cols = (() => { const c = lookup(ctx, dp.get(PDFName.of("Columns"))); return c ? c.asNumber() : w; })();
             raw = unpredict(raw, pv, colours, 8, cols);
-            if (!raw) continue;
+            if (!raw) { why.other++; continue; }
           }
-        } else if (dp) continue;
+        } else if (dp) { why.other++; continue; }
         imageData = rgbaFrom(raw, w, h, comps);
-        if (!imageData) continue;
-        if (comps === 3) keepCS = d.get(PDFName.of("ColorSpace"));   // preserve exact colour
+        if (!imageData) { why.other++; continue; }
+        if (comps === 3) keepCS = d.get(PDFName.of("ColorSpace"));
       } else {
-        continue;                                             // JBIG2, CCITT, JPX: already efficient
+        why.other++; continue;
       }
 
       const blob = await encodeJpeg(imageData, imageData.width, imageData.height, quality);
-      if (!blob || blob.size >= origBytes * 0.92) continue;    // no real gain, keep original
+      if (!blob) { why.tooBig++; continue; }
+      if (blob.size >= origBytes * 0.92) continue;
       const jpeg = new Uint8Array(await blob.arrayBuffer());
 
       const nd = PDFDict.withContext(ctx);
@@ -551,52 +676,100 @@ async function press(bytes, quality, onStep){
       }
       ctx.assign(ref, PDFRawStream.of(nd, jpeg));
       changed++;
-    } catch (e){ /* one bad image must not sink the file */ }
+    } catch (e){ why.other++; }
   }
 
+  if (shouldStop && shouldStop()) throw new Error("stopped");
   onStep(1);
   await yieldUI();
   const out = await doc.save({ useObjectStreams:true, addDefaultPage:false });
-  return { bytes: out, changed };
+  if (cv){ cv.width = cv.height = 1; }
+  return { bytes: out, changed, why };
 }
 
 /* ============================ queue + UI ============================ */
 const rowsEl = $("#rows"), resultsEl = $("#results"), savedEl = $("#saved"),
-      tallyLabel = $("#tallyLabel"), stopBtn = $("#stop"), drop = $("#drop"), picker = $("#picker");
+      tallyLabel = $("#tallyLabel"), tallySub = $("#tallySub"), stopBtn = $("#stop"),
+      drop = $("#drop"), picker = $("#picker"), statusEl = $("#status"), dlhint = $("#dlhint");
 
-let queue = [], running = false, stopped = false, totalBefore = 0, totalAfter = 0, doneCount = 0, skippedCount = 0;
+let queue = [], running = false, stopped = false;
+let totalBefore = 0, totalAfter = 0, doneCount = 0, skippedCount = 0;
+let batchTotal = 0, batchDone = 0, autoSaves = 0;
 
-function redrawStatic(){
-  if (!running && doneCount) tallyLabel.textContent = summaryText();
-  if (doneCount) updateTally();
-  rowsEl.querySelectorAll("[data-note]").forEach(el => {
-    const k = el.getAttribute("data-note");
-    if (k) el.textContent = t(k);
-  });
-  rowsEl.querySelectorAll(".redo").forEach(b => b.textContent = t("r.save"));
+let lastSpoke = 0;
+function say(msg, force){
+  const now = Date.now();
+  if (!force && now - lastSpoke < 1800) return;
+  lastSpoke = now;
+  statusEl.textContent = msg;
 }
-function summaryText(){
-  const unit = doneCount === 1 ? t("r.file") : t("r.files");
-  const base = `${t("tally.done")}: ${doneCount} ${unit}`;
-  return skippedCount ? `${base}, ${skippedCount} ${t("r.skippedn")}` : base;
+function presetTag(){
+  const el = document.querySelector('input[name="q"]:checked');
+  return (el && el.dataset.tag) || "compressed";
 }
+function outName(name, tag){
+  const base = name.replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]+/g, "").trim() || "document";
+  const mode = $("#naming").value;
+  if (mode === "same") return base + ".pdf";
+  if (mode === "preset") return `${base}-compressed-${tag || presetTag()}.pdf`;
+  return base + "-compressed.pdf";
+}
+refreshNamingHints = function(){
+  const sel = $("#naming");
+  const sample = lang === "es" ? "nombre" : "filename";
+  sel.options[0].textContent = `${sample}-compressed.pdf`;
+  sel.options[1].textContent = `${sample}-compressed-${presetTag()}.pdf`;
+};
+document.querySelectorAll('input[name="q"]').forEach(r => r.addEventListener("change", refreshNamingHints));
+
 function updateTally(){
   const saved = Math.max(0, totalBefore - totalAfter);
   const pct = totalBefore ? Math.round(saved / totalBefore * 100) : 0;
-  savedEl.innerHTML = `${mb(saved)}<small>${t("tally.saved")}${pct ? " (" + pct + "%)" : ""}</small>`;
+  savedEl.textContent = "";
+  if (!doneCount){ savedEl.textContent = " "; return; }
+  savedEl.append(mb(saved));
+  const lab = document.createElement("small");
+  lab.textContent = t("r.savedLine", { p: pct });
+  savedEl.append(lab);
 }
+function finishText(){
+  if (!doneCount) return t("r.none");
+  return doneCount === 1 ? t("r.inDownloads1") : t("r.inDownloads", { n: doneCount });
+}
+redrawStatic = function(){
+  if (!running){
+    if (doneCount || skippedCount){
+      tallyLabel.textContent = `${t("r.finished")} ${finishText()}`;
+      tallySub.textContent = skippedCount
+        ? (skippedCount === 1 ? t("r.leftAlone1") : t("r.leftAlone", { n: skippedCount })) : "";
+    } else if (rowsEl.children.length){
+      tallyLabel.textContent = t("r.stoppedAll");
+      tallySub.textContent = "";
+    }
+  }
+  rowsEl.querySelectorAll("[data-note]").forEach(el => { el.textContent = t(el.getAttribute("data-note")); });
+  rowsEl.querySelectorAll(".redo").forEach(b => { b.textContent = t(b.dataset.k || "r.save"); });
+  updateTally();
+};
 
 function addRow(file){
   const li = document.createElement("li");
   li.className = "row";
-  li.innerHTML = `
-    <div class="name"></div>
-    <div class="sizes"><s>${mb(file.size)}</s></div>
-    <div class="meter"><i></i></div>
-    <div class="note"><span data-note="r.queued">${t("r.queued")}</span></div>`;
+  li.innerHTML = `<div class="name"></div><div class="sizes"><s></s></div>
+    <div class="meter" aria-hidden="true"><i></i></div><div class="note"><span data-note="r.queued"></span></div>`;
   li.querySelector(".name").textContent = file.name;
-  rowsEl.prepend(li);
+  li.querySelector(".sizes s").textContent = mb(file.size);
+  li.querySelector("[data-note]").textContent = t("r.queued");
+  rowsEl.append(li);
   return li;
+}
+function rejectRow(name){
+  const li = document.createElement("li");
+  li.className = "row done failed";
+  li.innerHTML = `<div class="name"></div><div class="sizes"></div><div class="note err"><span data-note="r.notpdf"></span></div>`;
+  li.querySelector(".name").textContent = name;
+  li.querySelector("[data-note]").textContent = t("r.notpdf");
+  rowsEl.append(li);
 }
 function setNote(li, key, cls){
   const note = li.querySelector(".note");
@@ -614,91 +787,110 @@ function saveBlob(blob, filename){
   const a = document.createElement("a");
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  setTimeout(() => URL.revokeObjectURL(url), 180000);
 }
-function presetTag(){
-  const el = document.querySelector('input[name="q"]:checked');
-  return (el && el.dataset.tag) || "compressed";
+let revealed = false;
+function revealResults(){
+  if (revealed) return;
+  revealed = true;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  requestAnimationFrame(() => resultsEl.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }));
 }
-function outName(name){
-  const base = name.replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]+/g, "").trim() || "document";
-  const mode = $("#naming").value;
-  if (mode === "same") return base + ".pdf";
-  if (mode === "preset") return `${base}-compressed-${presetTag()}.pdf`;
-  return base + "-compressed.pdf";
-}
-/* keep the example filenames in the picker honest about the chosen setting */
-function refreshNamingHints(){
-  const sel = $("#naming");
-  const sample = lang === "es" ? "nombre" : "filename";
-  sel.options[0].textContent = `${sample}-compressed.pdf`;
-  sel.options[1].textContent = `${sample}-compressed-${presetTag()}.pdf`;
-}
-document.querySelectorAll('input[name="q"]').forEach(r => r.addEventListener("change", refreshNamingHints));
 
 async function run(){
   if (running) return;
-  running = true; stopped = false;
+  running = true;
   stopBtn.hidden = false;
+  resultsEl.setAttribute("aria-busy", "true");
+  say(t("r.working", { n: batchTotal }), true);
+
   while (queue.length && !stopped){
-    const { file, li } = queue.shift();
-    tallyLabel.textContent = `${t("r.pressing")} ${queue.length + 1} ${t("r.files")}`;
+    const { file, li, quality, tag } = queue.shift();
+    tallyLabel.textContent = t("r.working", { n: batchTotal });
+    tallySub.textContent = t("r.progress", { d: batchDone, n: batchTotal });
     const bar = li.querySelector(".meter i");
     setNote(li, "r.reading");
     setBar(bar, .04);
     try {
       const buf = new Uint8Array(await file.arrayBuffer());
       setNote(li, "r.pressing");
-      const quality = parseFloat(document.querySelector('input[name="q"]:checked').value);
-      const { bytes } = await press(buf, quality, p => setBar(bar, .06 + p * .88));
+      const { bytes, why } = await press(buf, quality,
+        p => setBar(bar, .06 + p * .88), () => stopped);
 
       li.classList.add("done");
-      setBar(bar, 1);
+      batchDone++;
       if (bytes.length >= file.size){
         li.classList.add("nogain");
         skippedCount++;
-        li.querySelector(".sizes").innerHTML = `<b>${mb(file.size)}</b>`;
-        setNote(li, "r.nogain");
+        li.querySelector(".sizes").textContent = mb(file.size);
+        setNote(li, why.tooBig ? "r.toobig" : why.alreadyJpeg ? "r.alreadyjpg" : "r.nogain");
       } else {
         const pct = Math.round((1 - bytes.length / file.size) * 100);
-        setBar(bar, Math.max(.03, bytes.length / file.size));
+        setBar(bar, pct / 100);                    // the bar shows how much came off
         li.querySelector(".sizes").innerHTML =
-          `<s>${mb(file.size)}</s> → <b>${mb(bytes.length)}</b> <span class="pct">−${pct}%</span>`;
+          `<s>${mb(file.size)}</s> &rarr; <b>${mb(bytes.length)}</b> <span class="pct">&minus;${pct}%</span>`;
         totalBefore += file.size; totalAfter += bytes.length; doneCount++;
         const blob = new Blob([bytes], { type:"application/pdf" });
-        const fname = outName(file.name);
-        const note = setNote(li, $("#auto").checked ? "r.saved" : "r.ready", "ok");
+        const fname = outName(file.name, tag);
+        const auto = $("#auto").checked;
+        const note = setNote(li, auto ? "r.sent" : "r.ready", "ok");
         const btn = document.createElement("button");
-        btn.className = "redo"; btn.type = "button"; btn.textContent = t("r.save");
+        btn.className = "redo"; btn.type = "button";
+        btn.dataset.k = auto ? "r.saveagain" : "r.save";
+        btn.textContent = t(btn.dataset.k);
         btn.addEventListener("click", () => saveBlob(blob, fname));
         note.appendChild(btn);
-        if ($("#auto").checked) saveBlob(blob, fname);
+        if (auto){
+          saveBlob(blob, fname);
+          if (++autoSaves === 2 && batchTotal > 1) dlhint.hidden = false;
+        }
         updateTally();
+        say(`${file.name}, ${mb(file.size)} → ${mb(bytes.length)}`);
       }
     } catch (e){
       li.classList.add("done", "failed");
-      skippedCount++;
-      setBar(bar, 1);
+      batchDone++;
       const m = String(e && e.message);
-      setNote(li, m === "encrypted" ? "r.encrypted" : m === "notpdf" ? "r.notpdf" : "r.broken", "err");
+      if (m === "stopped"){ setNote(li, "r.stopped"); }
+      else { skippedCount++; setNote(li, m === "encrypted" ? "r.encrypted" : "r.broken", "err"); }
     }
     await yieldUI();
   }
+
+  queue.forEach(q => { q.li.classList.add("done", "failed"); setNote(q.li, "r.stopped"); });
+  queue = [];
   running = false;
+  stopped = false;
+  resultsEl.setAttribute("aria-busy", "false");
   stopBtn.hidden = true;
-  tallyLabel.textContent = stopped ? t("r.stopped") : summaryText();
-  if (!queue.length) stopped = false;
+  redrawStatic();
+  say(`${t("r.finished")} ${finishText()}`, true);
 }
 
 function accept(files){
-  const pdfs = [...files].filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
-  if (!pdfs.length) return;
+  const all = [...files];
+  const pdfs = all.filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+  const others = all.filter(f => !pdfs.includes(f));
+  if (!all.length) return;
   resultsEl.hidden = false;
-  for (const f of pdfs) queue.push({ file:f, li:addRow(f) });
+  others.slice(0, 25).forEach(f => rejectRow(f.name));
+  if (!pdfs.length){
+    tallyLabel.textContent = t("r.onlypdf");
+    tallySub.textContent = "";
+    say(t("r.onlypdf"), true);
+    revealResults();
+    return;
+  }
+  const quality = parseFloat(document.querySelector('input[name="q"]:checked').value);
+  const tag = presetTag();
+  batchTotal = (running ? batchTotal : 0) + pdfs.length;
+  if (!running) batchDone = 0;
+  for (const f of pdfs) queue.push({ file:f, li:addRow(f), quality, tag });
+  revealResults();
   run();
 }
 
-/* drag + drop, including whole folders */
+/* drag and drop, including whole folders */
 async function walk(entry, out){
   if (!entry) return;
   if (entry.isFile){
@@ -730,18 +922,20 @@ document.addEventListener("drop", async e => {
   }
   accept(e.dataTransfer.files);
 });
+$("#pick").addEventListener("click", e => { e.stopPropagation(); picker.click(); });
 drop.addEventListener("click", () => picker.click());
 picker.addEventListener("click", e => e.stopPropagation());
-drop.addEventListener("keydown", e => {
-  if (e.key === "Enter" || e.key === " "){ e.preventDefault(); picker.click(); }
-});
 picker.addEventListener("change", () => { accept(picker.files); picker.value = ""; });
-stopBtn.addEventListener("click", () => { stopped = true; queue.forEach(q => setNote(q.li, "r.stopped")); queue = []; });
+stopBtn.addEventListener("click", () => {
+  stopped = true;
+  stopBtn.disabled = true;
+  say(t("r.stopped"), true);
+  setTimeout(() => { stopBtn.disabled = false; }, 1500);
+});
 
 stopBtn.hidden = true;
 refreshNamingHints();
-try { const l = localStorage.getItem("prensa.lang"); if (l === "es") applyLang("es"); } catch (e) {}
-window.__prensa = { press };   // test hook
+window.__prensa = { press };
 })();
 </script>
 </body>
