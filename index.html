@@ -285,6 +285,30 @@ td:first-child{color:var(--dark); font-weight:500}
 }
 .pgbtn.l{left:4px} .pgbtn.r{right:4px}
 .pgbtn[disabled]{opacity:.25}
+.pagegrid li{cursor:pointer}
+.loupe{
+  position:absolute; width:132px; height:132px; border-radius:66px; overflow:hidden;
+  border:3px solid var(--red); box-shadow:0 6px 22px rgba(0,0,0,.34); background:var(--surface);
+  pointer-events:none; z-index:5; display:none;
+}
+.loupe canvas{display:block; width:100%; height:100%}
+.loupe.on{display:block}
+.loupe::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    linear-gradient(to right, transparent calc(50% - 1px), rgba(225,29,46,.9) calc(50% - 1px), rgba(225,29,46,.9) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(to bottom, transparent calc(50% - 1px), rgba(225,29,46,.9) calc(50% - 1px), rgba(225,29,46,.9) calc(50% + 1px), transparent calc(50% + 1px));
+}
+.navrow{display:flex; gap:10px; justify-content:center; margin:14px 0 0}
+.navrow button{
+  font-family:var(--head); font-size:14px; font-weight:600; padding:0 16px; min-height:44px;
+  border:1.5px solid var(--line); background:var(--surface); color:var(--dark);
+  border-radius:999px; cursor:pointer;
+}
+.navrow button[disabled]{opacity:.35}
+.pairrow{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.pairrow .orbtn{margin:0}
+.total{text-align:center; color:var(--gray); font-size:13.5px; margin:14px 0 0}
 @media (max-width:520px){ .scanbody{padding:12px} }
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
@@ -443,7 +467,7 @@ td:first-child{color:var(--dark); font-weight:500}
     </section>
 
     <p class="foot">
-      <span class="build">v20260914-1041</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
+      <span class="build">v20260914-1045</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
       <a href="https://github.com/jimbodakilla/maria-pdf-reduce" data-i18n="foot.src">Source on GitHub</a>
       <span class="sig" data-i18n="tagline">SAME QUALITY. SMALLER FILES.</span>
     </p>
@@ -452,7 +476,7 @@ td:first-child{color:var(--dark); font-weight:500}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-<script src="scanner.js?v=20260914-1041"></script>
+<script src="scanner.js?v=20260914-1045"></script>
 <script>
 (() => {
 "use strict";
@@ -483,6 +507,9 @@ const ES = {
   "scan.delete":"Quitar esta página",
   "scan.colour":"Color","scan.gray":"Gris","scan.bw":"Blanco y negro",
   "scan.moveLeft":"Mover antes","scan.moveRight":"Mover después",
+  "scan.prev":"Anterior","scan.next":"Siguiente",
+  "scan.pageOf":"Página {n} de {m}","scan.pageSize":"Esta página pesa {s}",
+  "scan.total":"Total {s}","scan.tapPage":"Toca una página para verla",
   "scan.ready":"Tu PDF está listo: {s}","scan.share":"Enviar por correo o WhatsApp","scan.save":"Guardar el archivo",
   "scan.newdoc":"Escanear otro documento",
   "preset.legend":"¿Qué tan pequeños los quieres?",
@@ -563,6 +590,9 @@ const EN = {
   "scan.delete":"Remove this page",
   "scan.colour":"Colour","scan.gray":"Grey","scan.bw":"Black and white",
   "scan.moveLeft":"Move earlier","scan.moveRight":"Move later",
+  "scan.prev":"Previous","scan.next":"Next",
+  "scan.pageOf":"Page {n} of {m}","scan.pageSize":"This page is {s}",
+  "scan.total":"Total {s}","scan.tapPage":"Tap a page to see it",
   "scan.ready":"Your PDF is ready: {s}","scan.share":"Send by email or WhatsApp","scan.save":"Save the file",
   "scan.newdoc":"Scan another document",
   "doc.title":"Maria’s PDF Reduce — make PDFs smaller","r.under":"under 1 KB","r.xsmaller":"{x}× smaller",
@@ -1175,7 +1205,7 @@ if (typeof Scanner !== "undefined") (function(){
   const MAX_OUT = 2400;       // ~200 DPI on A4; 3000 cost ~25% more bytes for no readable gain
   const JPEG_Q  = 0.72;
 
-  let pages = [], shot = null, screen = "pages", look = "colour", lastPdf = null;
+  let pages = [], shot = null, screen = "pages", look = "colour", lastPdf = null, preview = 0;
   openBtn.hidden = false;
 
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
@@ -1211,7 +1241,8 @@ if (typeof Scanner !== "undefined") (function(){
     body.innerHTML = ""; foot.innerHTML = "";
     backBtn.hidden = screen === "pages" || screen === "done";
     countEl.textContent = screen === "done" ? t("scan.done")
-      : (screen === "review" || screen === "edit") ? t("scan.page", { n: pages.length + 1 })
+      : screen === "preview" ? t("scan.pageOf", { n: preview + 1, m: pages.length })
+      : (screen === "review" || screen === "edit") ? t("scan.page", { n: (shot && shot.editing != null ? shot.editing + 1 : pages.length + 1) })
       : pages.length === 0 ? t("scan.nopages")
       : pages.length === 1 ? t("scan.pages1") : t("scan.pages", { n: pages.length });
 
@@ -1244,6 +1275,8 @@ if (typeof Scanner !== "undefined") (function(){
     }
 
     if (screen === "edit"){ renderEditor(); return; }
+
+    if (screen === "preview"){ renderPreview(); return; }
 
     if (screen === "done"){
       body.appendChild(el("p", "busy", t("scan.ready", { s: mb(lastPdf.bytes.length) })));
@@ -1280,11 +1313,15 @@ if (typeof Scanner !== "undefined") (function(){
         right.type = "button"; right.disabled = i === pages.length - 1;
         right.setAttribute("aria-label", t("scan.moveRight"));
         right.addEventListener("click", () => move(1));
+        im.addEventListener("click", () => { preview = i; screen = "preview"; render(); });
+        im.style.cursor = "pointer";
         li.appendChild(im); li.appendChild(el("span", "no", String(i + 1))); li.appendChild(del);
         if (pages.length > 1){ li.appendChild(left); li.appendChild(right); }
         ul.appendChild(li);
       });
       body.appendChild(ul);
+      const total = pages.reduce((a, p) => a + p.blob.size, 0);
+      body.appendChild(el("p", "total", t("scan.tapPage") + " · " + t("scan.total", { s: mb(total) })));
     }
     foot.appendChild(button("pick", pages.length ? "scan.addPage" : "scan.take", takePhoto));
     if (pages.length) foot.appendChild(button("orbtn", "scan.make", makePdf));
@@ -1295,27 +1332,32 @@ if (typeof Scanner !== "undefined") (function(){
     const wrap = el("div", "cropwrap");
     const c = el("canvas");
     const maxW = Math.min(body.clientWidth - 8, 820);
-    const maxH = window.innerHeight * 0.56;
+    const maxH = window.innerHeight * 0.52;
     const sc = Math.min(maxW / shot.src.width, maxH / shot.src.height);
     c.width = Math.round(shot.src.width * sc); c.height = Math.round(shot.src.height * sc);
     const cx = c.getContext("2d");
+
+    // one full-resolution draw, then keep a mid-res copy for the magnifier so the
+    // zoomed view is sharp without holding a 12MP canvas open
     const tmp = el("canvas"); tmp.width = shot.src.width; tmp.height = shot.src.height;
     tmp.getContext("2d").putImageData(new ImageData(shot.src.data, shot.src.width, shot.src.height), 0, 0);
     cx.drawImage(tmp, 0, 0, c.width, c.height);
+    const hiScale = Math.min(1, 1500 / Math.max(shot.src.width, shot.src.height));
+    const hi = el("canvas");
+    hi.width = Math.round(shot.src.width * hiScale); hi.height = Math.round(shot.src.height * hiScale);
+    hi.getContext("2d").drawImage(tmp, 0, 0, hi.width, hi.height);
     tmp.width = tmp.height = 1;
     wrap.appendChild(c);
 
-    const handles = [];
-    const paint = () => {
-      cx.drawImage(tmp, 0, 0, c.width, c.height);
-      cx.strokeStyle = "#E11D2E"; cx.lineWidth = 2; cx.beginPath();
-      shot.corners.forEach((p, i) => { const x = p[0]*sc, y = p[1]*sc; i ? cx.lineTo(x, y) : cx.moveTo(x, y); });
-      cx.closePath(); cx.stroke();
-      handles.forEach((h, i) => { h.style.left = (shot.corners[i][0]*sc) + "px"; h.style.top = (shot.corners[i][1]*sc) + "px"; });
-    };
-    // keep a clean copy to redraw from while dragging
     const base = el("canvas"); base.width = c.width; base.height = c.height;
     base.getContext("2d").drawImage(c, 0, 0);
+
+    const loupe = el("div", "loupe");
+    const lc = el("canvas"); lc.width = 132; lc.height = 132;
+    const lcx = lc.getContext("2d");
+    loupe.appendChild(lc); wrap.appendChild(loupe);
+
+    const handles = [];
     const redraw = () => {
       cx.drawImage(base, 0, 0);
       cx.strokeStyle = "#E11D2E"; cx.lineWidth = 2; cx.beginPath();
@@ -1323,6 +1365,23 @@ if (typeof Scanner !== "undefined") (function(){
       cx.closePath(); cx.stroke();
       handles.forEach((h, i) => { h.style.left = (shot.corners[i][0]*sc) + "px"; h.style.top = (shot.corners[i][1]*sc) + "px"; });
     };
+    const ZOOM = 3;
+    const showLoupe = (i) => {
+      const [px, py] = shot.corners[i];
+      const span = 132 / (sc * ZOOM);                       // source pixels shown
+      lcx.fillStyle = "#fff"; lcx.fillRect(0, 0, 132, 132);
+      lcx.drawImage(hi,
+        (px - span/2) * hiScale, (py - span/2) * hiScale, span * hiScale, span * hiScale,
+        0, 0, 132, 132);
+      // sit the glass away from the finger, and flip it near the top edge
+      const dx = px * sc, dy = py * sc;
+      const above = dy > 150;
+      loupe.style.left = Math.max(0, Math.min(c.width - 132, dx - 66)) + "px";
+      loupe.style.top  = (above ? dy - 150 : dy + 26) + "px";
+      loupe.classList.add("on");
+    };
+    const hideLoupe = () => loupe.classList.remove("on");
+
     for (let i = 0; i < 4; i++){
       const h = el("div", "handle"); h.tabIndex = 0; h.setAttribute("role", "slider");
       h.setAttribute("aria-label", t("scan.hintEdit"));
@@ -1330,24 +1389,94 @@ if (typeof Scanner !== "undefined") (function(){
         const r = c.getBoundingClientRect();
         const px = (ev.clientX - r.left) / sc, py = (ev.clientY - r.top) / sc;
         shot.corners[i] = [Math.max(0, Math.min(shot.src.width, px)), Math.max(0, Math.min(shot.src.height, py))];
-        redraw();
+        redraw(); showLoupe(i);
       };
-      h.addEventListener("pointerdown", ev => { ev.preventDefault(); h.setPointerCapture(ev.pointerId); h.onpointermove = move; });
-      h.addEventListener("pointerup", ev => { h.onpointermove = null; try { h.releasePointerCapture(ev.pointerId); } catch(e){} });
+      h.addEventListener("pointerdown", ev => {
+        ev.preventDefault();
+        // attach the drag first: if capture is refused, the corner must still move
+        h.onpointermove = move;
+        showLoupe(i);
+        try { h.setPointerCapture(ev.pointerId); } catch (e) {}
+      });
+      const end = ev => { h.onpointermove = null; hideLoupe(); try { h.releasePointerCapture(ev.pointerId); } catch(e){} };
+      h.addEventListener("pointerup", end);
+      h.addEventListener("pointercancel", end);
       h.addEventListener("keydown", ev => {
         const step = ev.shiftKey ? 20 : 4;
         const d = { ArrowLeft:[-step,0], ArrowRight:[step,0], ArrowUp:[0,-step], ArrowDown:[0,step] }[ev.key];
         if (!d) return;
         ev.preventDefault();
         shot.corners[i] = [shot.corners[i][0] + d[0], shot.corners[i][1] + d[1]];
-        redraw();
+        redraw(); showLoupe(i);
+        clearTimeout(h._t); h._t = setTimeout(hideLoupe, 900);
       });
+      h.addEventListener("blur", hideLoupe);
       handles.push(h); wrap.appendChild(h);
     }
     body.appendChild(wrap);
     body.appendChild(el("p", "scanhint", shot.detected ? t("scan.hintEdit") : t("scan.noedge")));
     redraw();
     foot.appendChild(button("pick", "scan.use", async () => { await reflatten(); usePage(); }));
+  }
+
+  /* ---------- one page, full size, with everything you can do to it ---------- */
+  function renderPreview(){
+    const pg = pages[preview];
+    if (!pg){ screen = "pages"; render(); return; }
+    const im = el("img", "shot"); im.src = pg.url; im.alt = "";
+    body.appendChild(im);
+    const nav = el("div", "navrow");
+    const prev = el("button", null, "‹ " + t("scan.prev"));
+    prev.type = "button"; prev.disabled = preview === 0;
+    prev.addEventListener("click", () => { preview--; render(); });
+    const next = el("button", null, t("scan.next") + " ›");
+    next.type = "button"; next.disabled = preview === pages.length - 1;
+    next.addEventListener("click", () => { preview++; render(); });
+    nav.appendChild(prev); nav.appendChild(next);
+    body.appendChild(nav);
+    body.appendChild(el("p", "total", t("scan.pageSize", { s: mb(pg.blob.size) })));
+
+    foot.appendChild(button("pick", "scan.adjust", () => reopen(preview)));
+    const pair = el("div", "pairrow");
+    const back = el("button", "orbtn", t("scan.moveLeft"));
+    back.type = "button"; back.dataset.k = "scan.moveLeft"; back.disabled = preview === 0;
+    back.addEventListener("click", () => {
+      const j = preview - 1; const tmp = pages[preview]; pages[preview] = pages[j]; pages[j] = tmp;
+      preview = j; render();
+    });
+    const fwd = el("button", "orbtn", t("scan.moveRight"));
+    fwd.type = "button"; fwd.dataset.k = "scan.moveRight"; fwd.disabled = preview === pages.length - 1;
+    fwd.addEventListener("click", () => {
+      const j = preview + 1; const tmp = pages[preview]; pages[preview] = pages[j]; pages[j] = tmp;
+      preview = j; render();
+    });
+    pair.appendChild(back); pair.appendChild(fwd);
+    foot.appendChild(pair);
+    foot.appendChild(button("orbtn", "scan.delete", () => {
+      URL.revokeObjectURL(pages[preview].url);
+      pages.splice(preview, 1);
+      screen = "pages"; render();
+    }));
+  }
+
+  /* re-open a finished page in the corner editor, from its original photo */
+  async function reopen(i){
+    const pg = pages[i];
+    if (!pg.srcFile){ return; }
+    body.dataset.msg = t("scan.working"); screen = "busy"; render();
+    await new Promise(r => setTimeout(r, 20));
+    try {
+      const src = await loadImage(pg.srcFile);
+      look = pg.look || look;
+      shot = { src, corners: pg.corners.map(p => p.slice()), detected: true,
+               previewUrl: null, srcFile: pg.srcFile, editing: i };
+      await reflatten();
+      screen = "edit";
+    } catch (e){
+      screen = "pages";
+      alert(t("scan.badphoto"));
+    }
+    render();
   }
 
   /* ---------- actions ---------- */
@@ -1368,7 +1497,7 @@ if (typeof Scanner !== "undefined") (function(){
       const corners = sure ? det.corners : [
         [src.width*inset, src.height*inset], [src.width*(1-inset), src.height*inset],
         [src.width*(1-inset), src.height*(1-inset)], [src.width*inset, src.height*(1-inset)]];
-      shot = { src, corners, detected: sure, previewUrl: null };
+      shot = { src, corners, detected: sure, previewUrl: null, srcFile: f, editing: null };
       await reflatten();
       screen = sure ? "review" : "edit";
     } catch (e){
@@ -1388,10 +1517,20 @@ if (typeof Scanner !== "undefined") (function(){
   }
 
   function usePage(){
-    pages.push({ blob: shot.blob, url: shot.previewUrl, png: look === "bw" });
+    const entry = { blob: shot.blob, url: shot.previewUrl, png: look === "bw",
+                    srcFile: shot.srcFile, corners: shot.corners.map(p => p.slice()), look };
+    if (shot.editing != null){
+      URL.revokeObjectURL(pages[shot.editing].url);
+      pages[shot.editing] = entry;
+    } else {
+      pages.push(entry);
+    }
+    const wasEditing = shot.editing;
     shot.previewUrl = null;            // ownership moves to the page
     shot = null;                       // release the full-resolution source
-    screen = "pages"; render();
+    if (wasEditing != null){ preview = wasEditing; screen = "preview"; }
+    else { screen = "pages"; }
+    render();
   }
 
   async function makePdf(){
@@ -1428,7 +1567,13 @@ if (typeof Scanner !== "undefined") (function(){
 
   openBtn.addEventListener("click", open);
   closeBtn.addEventListener("click", close);
-  backBtn.addEventListener("click", () => { screen = shot && screen === "edit" ? "review" : "pages"; render(); });
+  backBtn.addEventListener("click", () => {
+  if (screen === "preview"){ screen = "pages"; }
+  else if (screen === "edit" && shot && shot.editing != null){ screen = "preview"; shot = null; }
+  else if (screen === "edit" && shot){ screen = "review"; }
+  else { screen = "pages"; }
+  render();
+});
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !view.hidden) close(); });
   window.addEventListener("prensa:lang", render);
   window.__scan = { open, state: () => ({ screen, pages: pages.length }) };
