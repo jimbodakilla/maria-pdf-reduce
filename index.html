@@ -204,6 +204,7 @@ th{font-family:var(--head); font-weight:600; font-size:13px; color:var(--dark)}
 td:not(:first-child),th:not(:first-child){text-align:right}
 td:first-child{color:var(--dark); font-weight:500}
 .foot{color:var(--gray); font-size:13.5px; padding-bottom:44px; max-width:640px}
+.build{display:block; font-size:11px; color:var(--gray); opacity:.7; letter-spacing:.04em; margin-bottom:4px}
 .foot a{color:var(--red)}
 .foot .sig{display:block; font-size:11px; font-weight:600; letter-spacing:.14em; color:var(--gray); margin-top:10px}
 
@@ -442,7 +443,7 @@ td:first-child{color:var(--dark); font-weight:500}
     </section>
 
     <p class="foot">
-      <span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
+      <span class="build">v20260914-1041</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
       <a href="https://github.com/jimbodakilla/maria-pdf-reduce" data-i18n="foot.src">Source on GitHub</a>
       <span class="sig" data-i18n="tagline">SAME QUALITY. SMALLER FILES.</span>
     </p>
@@ -451,7 +452,7 @@ td:first-child{color:var(--dark); font-weight:500}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-<script src="scanner.js"></script>
+<script src="scanner.js?v=20260914-1041"></script>
 <script>
 (() => {
 "use strict";
