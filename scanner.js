@@ -569,5 +569,30 @@ function png1bit(img){
   return new Blob([out], { type: "image/png" });
 }
 
-root.Scanner = { detectCorners, warp, enhance, outputSize, quadArea, homographyDstToSrc, png1bit, packBilevel };
+/* ---------- mixed raster ----------
+   A scanned page is crisp black text on a mostly blank sheet, with a little colour.
+   Encoding all of that as one JPEG spends almost everything on the text edges.
+   Split it: the text becomes a 1-bit stencil at full size, the colour becomes a
+   small JPEG underneath. Text ends up sharper than the JPEG version and the page
+   costs about a sixth as much. */
+function splitLayers(img, inkAt, chromaAt){
+  const { width:W, height:H, data } = img;
+  const mask = { data: new Uint8ClampedArray(W * H * 4), width: W, height: H };
+  const bg   = { data: new Uint8ClampedArray(W * H * 4), width: W, height: H };
+  let ink = 0;
+  for (let i = 0, o = 0; i < W * H; i++, o += 4){
+    const r = data[o], g = data[o+1], b = data[o+2];
+    const l = 0.299*r + 0.587*g + 0.114*b;
+    const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+    const isInk = l < inkAt && chroma < chromaAt;
+    mask.data[o] = mask.data[o+1] = mask.data[o+2] = isInk ? 0 : 255;
+    mask.data[o+3] = 255;
+    if (isInk){ bg.data[o] = bg.data[o+1] = bg.data[o+2] = 255; ink++; }
+    else { bg.data[o] = r; bg.data[o+1] = g; bg.data[o+2] = b; }
+    bg.data[o+3] = 255;
+  }
+  return { mask, bg, inkFraction: ink / (W * H) };
+}
+
+root.Scanner = { detectCorners, warp, enhance, outputSize, quadArea, homographyDstToSrc, png1bit, packBilevel, splitLayers };
 })(typeof window !== "undefined" ? window : globalThis);

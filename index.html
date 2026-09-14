@@ -491,7 +491,7 @@ td:first-child{color:var(--dark); font-weight:500}
     </section>
 
     <p class="foot">
-      <span class="build">v20260914-1215</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
+      <span class="build">v20260914-1233</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
       <a href="https://github.com/jimbodakilla/maria-pdf-reduce" data-i18n="foot.src">Source on GitHub</a>
       <span class="sig" data-i18n="tagline">SAME QUALITY. SMALLER FILES.</span>
     </p>
@@ -500,7 +500,7 @@ td:first-child{color:var(--dark); font-weight:500}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-<script src="scanner.js?v=20260914-1215"></script>
+<script src="scanner.js?v=20260914-1233"></script>
 <script>
 (() => {
 "use strict";
@@ -538,8 +538,8 @@ const ES = {
   "scan.badphoto":"No se pudo leer esa foto. Inténtalo de nuevo.",
   "scan.delete":"Quitar esta página",
   "scan.colour":"Color","scan.gray":"Gris","scan.bw":"Blanco y negro",
-  "scan.colourHint":"Guarda los colores. Unos 400 KB por página.",
-  "scan.bwHint":"Ideal para documentos escritos. Unos 60 KB por página, casi 8 veces más liviano.",
+  "scan.colourHint":"Guarda los colores y el texto sale nítido. Unos 60 KB por página.",
+  "scan.bwHint":"Ideal para documentos escritos. Unos 50 KB por página.",
   "scan.done2":"Continuar","scan.moveLeft":"Mover hacia arriba","scan.moveRight":"Mover hacia abajo",
   "scan.prev":"Anterior","scan.next":"Siguiente",
   "scan.pageOf":"Página {n} de {m}","scan.pageSize":"Esta página pesa {s}",
@@ -631,8 +631,8 @@ const EN = {
   "scan.badphoto":"That photo could not be read. Please try again.",
   "scan.delete":"Remove this page",
   "scan.colour":"Colour","scan.gray":"Grey","scan.bw":"Black and white",
-  "scan.colourHint":"Keeps the colours. About 400 KB a page.",
-  "scan.bwHint":"Best for written documents. About 60 KB a page, nearly 8 times lighter.",
+  "scan.colourHint":"Keeps the colours, and text stays sharp. About 60 KB a page.",
+  "scan.bwHint":"Best for written documents. About 50 KB a page.",
   "scan.done2":"Continue","scan.moveLeft":"Move up","scan.moveRight":"Move down",
   "scan.prev":"Previous","scan.next":"Next",
   "scan.pageOf":"Page {n} of {m}","scan.pageSize":"This page is {s}",
@@ -1248,6 +1248,10 @@ if (typeof Scanner !== "undefined") (function(){
   const MAX_SRC = 4200;       // cap the decode so a 48MP photo cannot exhaust memory
   const MAX_OUT = 2400;       // ~200 DPI on A4; 3000 cost ~25% more bytes for no readable gain
   const JPEG_Q  = 0.72;
+  const BG_SCALE = 0.25;     // colour layer under the text stencil
+  const BG_Q     = 0.58;
+  const INK_AT   = 132;      // darker than this is ink
+  const CHROMA_AT = 60;      // and neutral enough; coloured marks stay in the colour layer
 
   let pages = [], shot = null, screen = "pages", look = "colour", lastPdf = null, preview = 0;
   openBtn.hidden = false;
@@ -1271,6 +1275,26 @@ if (typeof Scanner !== "undefined") (function(){
       return data;
     } finally { URL.revokeObjectURL(url); }
   }
+  /* colour page as a 1-bit text stencil over a small colour layer */
+  async function buildLayers(flat){
+    if (typeof pako === "undefined") return null;
+    const { mask, bg } = Scanner.splitLayers(flat, INK_AT, CHROMA_AT);
+    const stencil = pako.deflate(Scanner.packBilevel(mask, false).bytes, { level: 9 });
+    const bw = Math.max(1, Math.round(flat.width * BG_SCALE));
+    const bh = Math.max(1, Math.round(flat.height * BG_SCALE));
+    const src = document.createElement("canvas");
+    src.width = flat.width; src.height = flat.height;
+    src.getContext("2d").putImageData(new ImageData(bg.data, bg.width, bg.height), 0, 0);
+    const small = document.createElement("canvas");
+    small.width = bw; small.height = bh;
+    const sx = small.getContext("2d");
+    sx.imageSmoothingEnabled = true; sx.imageSmoothingQuality = "high";
+    sx.drawImage(src, 0, 0, bw, bh);
+    src.width = src.height = 1;
+    const layer = await new Promise(r => small.toBlob(b => { small.width = small.height = 1; r(b); }, "image/jpeg", BG_Q));
+    return { stencil, layer, w: flat.width, h: flat.height };
+  }
+
   function toBlob(img, q, asPng){
     if (asPng){
       const b = Scanner.png1bit(img);          // 1-bit greyscale: ~5x smaller than canvas PNG
@@ -1362,7 +1386,7 @@ if (typeof Scanner !== "undefined") (function(){
         li.appendChild(im); li.appendChild(el("span", "no", String(i + 1)));
         ul.appendChild(li);
       });
-      const total = pages.reduce((a, p) => a + p.blob.size, 0);
+      const total = pages.reduce((a, p) => a + (p.pdfBytes || p.blob.size), 0);
       const cap = el("p", "total");
       cap.style.margin = "0 0 12px";
       cap.textContent = t("scan.tapPage") + " · " + t("scan.total", { s: mb(total) });
@@ -1554,8 +1578,12 @@ if (typeof Scanner !== "undefined") (function(){
       const flat = flatten(src, pg.corners, mode);
       const blob = await toBlob(flat, JPEG_Q, mode === "bw");
       URL.revokeObjectURL(pg.url);
+      const bits = mode === "bw" && typeof pako !== "undefined"
+        ? pako.deflate(Scanner.packBilevel(flat, false).bytes, { level: 9 }) : null;
+      const mrc = mode === "bw" ? null : await buildLayers(flat);
       pages[i] = Object.assign({}, pg, { blob, url: URL.createObjectURL(blob), png: mode === "bw",
-                                         bits: mode === "bw" ? Scanner.packBilevel(flat, false) : null, look: mode });
+        bits, mrc, dims: { w: flat.width, h: flat.height }, look: mode,
+        pdfBytes: bits ? bits.length : mrc ? mrc.stencil.length + mrc.layer.size : blob.size });
     } catch (e){ /* keep the page as it was */ }
     screen = "preview"; render();
   }
@@ -1621,12 +1649,20 @@ if (typeof Scanner !== "undefined") (function(){
     if (mine.previewUrl) URL.revokeObjectURL(mine.previewUrl);
     mine.previewUrl = URL.createObjectURL(blob);
     mine.blob = blob;
-    mine.bits = look === "bw" ? Scanner.packBilevel(flat, false) : null;
+    mine.bits = look === "bw" && typeof pako !== "undefined"
+      ? pako.deflate(Scanner.packBilevel(flat, false).bytes, { level: 9 })
+      : null;
+    mine.dims = { w: flat.width, h: flat.height };
+    mine.mrc  = look === "bw" ? null : await buildLayers(flat);
+    mine.pdfBytes = mine.bits ? mine.bits.length
+      : mine.mrc ? mine.mrc.stencil.length + mine.mrc.layer.size
+      : blob.size;
   }
 
   function usePage(){
     const entry = { blob: shot.blob, url: shot.previewUrl, png: look === "bw", bits: shot.bits,
-                    srcFile: shot.srcFile, corners: shot.corners.map(p => p.slice()), look };
+                    dims: shot.dims, mrc: shot.mrc, pdfBytes: shot.pdfBytes, srcFile: shot.srcFile,
+                    corners: shot.corners.map(p => p.slice()), look };
     if (shot.editing != null){
       URL.revokeObjectURL(pages[shot.editing].url);
       pages[shot.editing] = entry;
@@ -1646,9 +1682,8 @@ if (typeof Scanner !== "undefined") (function(){
     await new Promise(r => setTimeout(r, 30));
     const doc = await PDFDocument.create();
     for (const pg of pages){
-      if (pg.bits && typeof pako !== "undefined"){
-        const { bytes: raw, width: iw, height: ih } = pg.bits;
-        const packed = pako.deflate(raw, { level: 9 });
+      if (pg.bits && pg.dims){
+        const packed = pg.bits, iw = pg.dims.w, ih = pg.dims.h;
         const d = PDFDict.withContext(doc.context);
         d.set(PDFName.of("Type"), PDFName.of("XObject"));
         d.set(PDFName.of("Subtype"), PDFName.of("Image"));
@@ -1665,6 +1700,32 @@ if (typeof Scanner !== "undefined") (function(){
         const nm = page.node.newXObject("Im", ref);
         page.pushOperators(
           PDFLib.pushGraphicsState(),
+          PDFLib.concatTransformationMatrix(pw, 0, 0, ph, 0, 0),
+          PDFLib.drawObject(nm),
+          PDFLib.popGraphicsState());
+        continue;
+      }
+      if (pg.mrc){
+        const m = pg.mrc;
+        const sc = 842 / Math.max(m.w, m.h);
+        const pw = m.w * sc, ph = m.h * sc;
+        const page = doc.addPage([pw, ph]);
+        const layer = await doc.embedJpg(await m.layer.arrayBuffer());
+        page.drawImage(layer, { x: 0, y: 0, width: pw, height: ph });
+        const d = PDFDict.withContext(doc.context);
+        d.set(PDFName.of("Type"), PDFName.of("XObject"));
+        d.set(PDFName.of("Subtype"), PDFName.of("Image"));
+        d.set(PDFName.of("Width"), PDFNumber.of(m.w));
+        d.set(PDFName.of("Height"), PDFNumber.of(m.h));
+        d.set(PDFName.of("ImageMask"), PDFLib.PDFBool.True);
+        d.set(PDFName.of("BitsPerComponent"), PDFNumber.of(1));
+        d.set(PDFName.of("Filter"), PDFName.of("FlateDecode"));
+        d.set(PDFName.of("Length"), PDFNumber.of(m.stencil.length));
+        const ref = doc.context.register(PDFRawStream.of(d, m.stencil));
+        const nm = page.node.newXObject("Txt", ref);
+        page.pushOperators(
+          PDFLib.pushGraphicsState(),
+          PDFLib.setFillingRgbColor(0, 0, 0),
           PDFLib.concatTransformationMatrix(pw, 0, 0, ph, 0, 0),
           PDFLib.drawObject(nm),
           PDFLib.popGraphicsState());
