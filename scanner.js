@@ -396,6 +396,18 @@ function illumination(lum, W, H, order){
    fails because the fitted surface absorbs the sheet-vs-table difference. Growing the
    background from the frame edge climbs the soft paper edge and eats the sheet.
    Cropping to the four corners removes the surface exactly and is already in the UI. */
+/* Background removal: attempted four ways, none reliable enough to ship.
+   1) largest bright region  -> picks the background: ink fragments the sheet into
+      pieces smaller than the unbroken table.
+   2) threshold after quadratic illumination correction -> the fitted surface bends
+      around a centred subject and absorbs the sheet-vs-table contrast.
+   3) grow background inward from the frame edge -> climbs the soft paper edge and
+      eats the sheet.
+   4) plane-flattened, two-stage Otsu, holes filled before choosing the region
+      (the ordering fix for 1) -> separates on a dark table but erased most of the
+      subject on a light one, so it was removed rather than shipped.
+   Cropping to the four corners removes the surface exactly, and Apple's scanner
+   does not remove irregular backgrounds either: it finds a rectangle and crops. */
 function enhance(img, mode){
   const { width:W, height:H, data } = img;
   if (mode === "photo") return img;
