@@ -345,8 +345,8 @@ td:first-child{color:var(--dark); font-weight:500}
           <label class="sw"><input type="checkbox" id="auto" checked><span data-i18n="sw.auto">Save each file as soon as it is ready</span></label>
           <label class="sw" for="naming"><span data-i18n="sw.name">Saved as</span>
             <select id="naming">
-              <option value="tag" selected>filename-compressed.pdf</option>
-              <option value="preset">filename-compressed-email.pdf</option>
+              <option value="tag" selected>filename-maria.pdf</option>
+              <option value="preset">filename-maria-email.pdf</option>
               <option value="same" data-i18n="sw.same">the same name (a separate copy)</option>
             </select>
           </label>
@@ -832,20 +832,20 @@ function say(msg, force){
 }
 function presetTag(){
   const el = document.querySelector('input[name="q"]:checked');
-  return (el && el.dataset.tag) || "compressed";
+  return (el && el.dataset.tag) || "maria";
 }
 function outName(name, tag, mode){
   const base = name.replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]+/g, "").trim() || "document";
   mode = mode || $("#naming").value;
   if (mode === "same") return base + ".pdf";
-  if (mode === "preset") return `${base}-compressed-${tag || presetTag()}.pdf`;
-  return base + "-compressed.pdf";
+  if (mode === "preset") return `${base}-maria-${tag || presetTag()}.pdf`;
+  return base + "-maria.pdf";
 }
 refreshNamingHints = function(){
   const sel = $("#naming");
   const sample = lang === "es" ? "nombre" : "filename";
-  sel.options[0].textContent = `${sample}-compressed.pdf`;
-  sel.options[1].textContent = `${sample}-compressed-${presetTag()}.pdf`;
+  sel.options[0].textContent = `${sample}-maria.pdf`;
+  sel.options[1].textContent = `${sample}-maria-${presetTag()}.pdf`;
 };
 document.querySelectorAll('input[name="q"]').forEach(r => r.addEventListener("change", refreshNamingHints));
 
@@ -924,6 +924,16 @@ function saveBlob(blob, filename){
 }
 /* Chrome starts only ~10 of 200 downloads fired back to back, and reports no error
    for the ones it drops. Spacing them ~150ms apart gets every file through. */
+const KEEP_OUTPUTS = 24;            // most recent finished files kept re-savable
+const retained = [];
+function retain(holder, btn){
+  retained.push({ holder, btn });
+  while (retained.length > KEEP_OUTPUTS){
+    const old = retained.shift();
+    old.holder.blob = null;                  // the click closure reads this
+    if (old.btn && old.btn.parentNode) old.btn.remove();
+  }
+}
 const SAVE_GAP = 160;
 const saveQ = [];
 let draining = false, lastSave = 0;
@@ -1009,8 +1019,10 @@ async function run(){
           btn.className = "redo"; btn.type = "button";
           btn.dataset.k = key;
           btn.textContent = t(key);
-          btn.addEventListener("click", () => saveBlob(blob, fname));
+          const holder = { blob };
+          btn.addEventListener("click", () => { if (holder.blob) saveBlob(holder.blob, fname); });
           note.appendChild(btn);
+          retain(holder, btn);
         };
         if (auto){
           setNote(li, "r.waitingSave", "ok");
@@ -1283,7 +1295,7 @@ if (typeof Scanner !== "undefined") (function(){
       handles.push(h); wrap.appendChild(h);
     }
     body.appendChild(wrap);
-    body.appendChild(el("p", "scanhint", t("scan.hintEdit")));
+    body.appendChild(el("p", "scanhint", shot.detected ? t("scan.hintEdit") : t("scan.noedge")));
     redraw();
     foot.appendChild(button("pick", "scan.use", async () => { await reflatten(); usePage(); }));
   }
@@ -1299,13 +1311,16 @@ if (typeof Scanner !== "undefined") (function(){
     try {
       const src = await loadImage(f);
       const det = Scanner.detectCorners(src, { targetLong: 640 });
+      // Measured on a 21-case benchmark: every correct detection scored >=17,
+      // every wrong one <=11. Below the line, ask rather than guess.
+      const sure = !!det && det.confidence >= 14;
       const inset = 0.06;
-      const corners = det ? det.corners : [
+      const corners = sure ? det.corners : [
         [src.width*inset, src.height*inset], [src.width*(1-inset), src.height*inset],
         [src.width*(1-inset), src.height*(1-inset)], [src.width*inset, src.height*(1-inset)]];
-      shot = { src, corners, detected: !!det, previewUrl: null };
+      shot = { src, corners, detected: sure, previewUrl: null };
       await reflatten();
-      screen = det ? "review" : "edit";
+      screen = sure ? "review" : "edit";
     } catch (e){
       shot = null; screen = "pages";
       body.dataset.msg = "";
@@ -1342,7 +1357,7 @@ if (typeof Scanner !== "undefined") (function(){
       page.drawImage(jpg, { x: 0, y: 0, width: pw, height: ph });
     }
     const bytes = await doc.save({ useObjectStreams: true });
-    const name = "escaneo-" + new Date().toISOString().slice(0, 10) + ".pdf";
+    const name = "maria-" + new Date().toISOString().slice(0, 10) + ".pdf";
     const blob = new Blob([bytes], { type: "application/pdf" });
     lastPdf = { bytes, blob, name, file: new File([blob], name, { type: "application/pdf" }) };
     screen = "done"; render();

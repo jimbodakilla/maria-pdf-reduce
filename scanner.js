@@ -129,23 +129,119 @@ function orderCorners(q){
   return [s[start], s[(start+1)%4], s[(start+2)%4], s[(start+3)%4]];   // TL TR BR BL
 }
 
-/* ---------- public: find the page ---------- */
+/* ---------- public: find the page ----------
+   One brightness threshold is not enough: white paper on a pale desk, or a shadow
+   across a corner, both produce a confident-looking but wrong quad. So generate
+   several candidates and keep the one whose outline actually sits on an edge. */
+function sobel(g, w, h){
+  const m = new Float32Array(w * h);
+  for (let y = 1; y < h - 1; y++){
+    for (let x = 1; x < w - 1; x++){
+      const i = y * w + x;
+      const gx = -g[i-w-1] - 2*g[i-1] - g[i+w-1] + g[i-w+1] + 2*g[i+1] + g[i+w+1];
+      const gy = -g[i-w-1] - 2*g[i-w] - g[i-w+1] + g[i+w-1] + 2*g[i+w] + g[i+w+1];
+      m[i] = Math.sqrt(gx*gx + gy*gy);
+    }
+  }
+  return m;
+}
+/* mean edge strength under the quad's outline: a real page border scores high,
+   an arbitrary line across flat desk scores near zero */
+function borderScore(quad, mag, w, h){
+  let total = 0, n = 0;
+  for (let e = 0; e < 4; e++){
+    const a = quad[e], b = quad[(e+1) % 4];
+    const len = Math.hypot(b[0]-a[0], b[1]-a[1]);
+    const steps = Math.max(8, Math.min(160, Math.round(len)));
+    for (let s = 0; s <= steps; s++){
+      const f = s / steps;
+      const x = Math.round(a[0] + (b[0]-a[0]) * f), y = Math.round(a[1] + (b[1]-a[1]) * f);
+      if (x < 1 || y < 1 || x >= w-1 || y >= h-1) { n++; continue; }   // off-frame counts as no edge
+      let best = 0;                       // look a little either side of the line
+      for (let d = -2; d <= 2; d++){
+        const xx = Math.min(w-2, Math.max(1, x + d)), yy = Math.min(h-2, Math.max(1, y + d));
+        const v = Math.max(mag[y*w + xx], mag[yy*w + x]);
+        if (v > best) best = v;
+      }
+      total += best; n++;
+    }
+  }
+  return n ? total / n : 0;
+}
+/* A real page boundary has the page on one side and the surface on the other.
+   White paper on a white desk does not, which is exactly when brightness
+   thresholding fails, so measure the step across the outline directly. */
+function edgeStep(quad, g, w, h){
+  const cx = (quad[0][0]+quad[1][0]+quad[2][0]+quad[3][0]) / 4;
+  const cy = (quad[0][1]+quad[1][1]+quad[2][1]+quad[3][1]) / 4;
+  const at = (x, y) => {
+    const xi = Math.min(w-1, Math.max(0, Math.round(x))), yi = Math.min(h-1, Math.max(0, Math.round(y)));
+    return g[yi*w + xi];
+  };
+  let sum = 0, n = 0;
+  for (let e = 0; e < 4; e++){
+    const a = quad[e], b = quad[(e+1) % 4];
+    const len = Math.hypot(b[0]-a[0], b[1]-a[1]);
+    const steps = Math.max(6, Math.min(90, Math.round(len / 6)));
+    for (let s = 1; s < steps; s++){
+      const f = s / steps;
+      const x = a[0] + (b[0]-a[0]) * f, y = a[1] + (b[1]-a[1]) * f;
+      let nx = x - cx, ny = y - cy;                       // outward direction
+      const d = Math.hypot(nx, ny) || 1; nx /= d; ny /= d;
+      sum += at(x - nx*7, y - ny*7) - at(x + nx*7, y + ny*7);   // inside minus outside
+      n++;
+    }
+  }
+  return n ? sum / n : 0;
+}
+function candidateFrom(g, w, h, thr){
+  const { lab, bestId, bestCount } = largestBrightBlob(g, w, h, thr);
+  if (bestId < 0 || bestCount < w * h * 0.04) return null;
+  const hull = convexHull(blobBoundary(lab, bestId, w, h));
+  const quad = maxAreaQuad(thinHull(hull, 36));
+  return quad ? orderCorners(quad) : null;
+}
+function percentile(g, p){
+  const hist = new Float64Array(256);
+  for (let i = 0; i < g.length; i++) hist[Math.max(0, Math.min(255, g[i] | 0))]++;
+  const want = g.length * p;
+  let acc = 0;
+  for (let v = 0; v < 256; v++){ acc += hist[v]; if (acc >= want) return v; }
+  return 255;
+}
+
 function detectCorners(img, opts){
   const targetLong = (opts && opts.targetLong) || 640;
   const { g, w, h, scale } = toGrayDownscaled(img, targetLong);
-  const thr = otsu(g);
-  const { lab, bestId, bestCount } = largestBrightBlob(g, w, h, thr);
-  if (bestId < 0 || bestCount < w * h * 0.06) return null;       // no plausible page
-  const hull = convexHull(blobBoundary(lab, bestId, w, h));
-  const quad = maxAreaQuad(thinHull(hull, 36));
-  if (!quad) return null;
-  const ordered = orderCorners(quad);
+  const mag = sobel(g, w, h);
+  let norm = 0;
+  for (let i = 0; i < mag.length; i++) norm += mag[i];
+  norm = (norm / mag.length) || 1;
+
+  const thrs = [otsu(g), percentile(g, 0.35), percentile(g, 0.5), percentile(g, 0.62), percentile(g, 0.75)];
+  const seen = new Set();
+  let best = null, bestScore = 0, bestStep = 0;
+  for (const thr of thrs){
+    const key = thr | 0;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const quad = candidateFrom(g, w, h, thr);
+    if (!quad) continue;
+    const area = quadArea(quad), frame = w * h;
+    const cov = area / frame;
+    if (cov < 0.05 || cov > 0.985) continue;                  // whole frame, or nothing
+    const border = borderScore(quad, mag, w, h) / norm;
+    const step = Math.abs(edgeStep(quad, g, w, h));
+    let score = border * Math.min(2, 0.35 + step / 14);       // outline on an edge AND a real step across it
+    if (cov > 0.93) score *= 0.5;                             // probably swallowed the desk
+    if (score > bestScore){ bestScore = score; best = quad; bestStep = step; }
+  }
+  if (!best) return null;
   const inv = 1 / scale;
-  const full = ordered.map(p => [p[0] * inv, p[1] * inv]);
-  // reject implausible results: too small, or too far from a convex quad
-  const area = quadArea(full);
+  const corners = best.map(p => [p[0] * inv, p[1] * inv]);
+  const area = quadArea(corners);
   if (area < img.width * img.height * 0.05) return null;
-  return { corners: full, coverage: area / (img.width * img.height) };
+  return { corners, coverage: area / (img.width * img.height), confidence: bestScore, step: bestStep };
 }
 
 function quadArea(q){
