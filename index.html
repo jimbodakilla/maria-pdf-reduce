@@ -106,6 +106,15 @@ h1{
   .pointer-only{display:none}
   .touch-only{display:block}
   .pick{width:100%; max-width:330px}
+  /* paper first: the camera is the reason she is here, the PDF picker is secondary */
+  #drop{display:flex; flex-direction:column}
+  #scanOpen{order:-1; background:var(--red); color:#fff; border-color:var(--red);
+            min-height:52px; font-size:16px; width:100%; max-width:330px; margin:0 auto 14px;
+            box-shadow:0 6px 18px rgba(225,29,46,.22)}
+  #scanOpen:hover{background:var(--red-deep)}
+  #pick{background:var(--surface); color:var(--red); border:1.5px solid var(--line);
+        box-shadow:none; font-size:15px}
+  .sheet-sub{order:1}
 }
 
 /* ---------- settings ---------- */
@@ -254,7 +263,7 @@ td:first-child{color:var(--dark); font-weight:500}
 .busy{text-align:center; padding:40px 0; color:var(--gray); font-size:15px}
 .pagegrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; margin:0; padding:0; list-style:none}
 .pagegrid li{position:relative; border:1px solid var(--line-soft); border-radius:var(--r); overflow:hidden; background:var(--surface)}
-.pagegrid img{display:block; width:100%; aspect-ratio:1/1.35; object-fit:cover}
+.pagegrid img{display:block; width:100%; aspect-ratio:1/1.35; object-fit:contain; background:var(--surface)}
 .pagegrid .no{
   position:absolute; top:6px; left:6px; background:var(--red); color:#fff; font-family:var(--head);
   font-size:12px; font-weight:600; min-width:22px; height:22px; border-radius:11px;
@@ -272,19 +281,20 @@ td:first-child{color:var(--dark); font-weight:500}
 }
 .handle::after{content:""; position:absolute; inset:16px; border-radius:6px; background:var(--red)}
 .handle:focus-visible{outline:3px solid var(--dark); outline-offset:2px}
-.looks{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0 0}
+.looks{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:16px 0 0}
 .looks button{
   font-family:var(--head); font-size:14px; font-weight:600; padding:11px 6px;
   border:1.5px solid var(--line); background:var(--surface); color:var(--dark);
   border-radius:var(--rs); cursor:pointer; min-height:46px;
 }
 .looks button[aria-pressed="true"]{border-color:var(--red); background:var(--pink-lite); color:var(--red)}
+.pgrow{display:flex; border-top:1px solid var(--line-soft)}
 .pgbtn{
-  position:absolute; bottom:4px; width:36px; height:36px; border-radius:18px; border:0;
-  background:rgba(0,0,0,.55); color:#fff; font-size:16px; line-height:1; cursor:pointer;
+  flex:1; min-height:40px; border:0; background:var(--surface); color:var(--red);
+  font-size:17px; line-height:1; cursor:pointer;
 }
-.pgbtn.l{left:4px} .pgbtn.r{right:4px}
-.pgbtn[disabled]{opacity:.25}
+.pgbtn + .pgbtn{border-left:1px solid var(--line-soft)}
+.pgbtn[disabled]{color:var(--gray); opacity:.4}
 .pagegrid li{cursor:pointer}
 .loupe{
   position:absolute; width:132px; height:132px; border-radius:66px; overflow:hidden;
@@ -311,6 +321,17 @@ td:first-child{color:var(--dark); font-weight:500}
 .pairrow{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .pairrow .orbtn{margin:0}
 .total{text-align:center; color:var(--gray); font-size:13.5px; margin:14px 0 0}
+.empty{display:flex; flex-direction:column; justify-content:center; min-height:58vh; text-align:left; max-width:330px; margin:0 auto}
+.emptyTitle{font-family:var(--head); font-size:19px; font-weight:600; color:var(--dark); margin:0 0 16px; text-align:center}
+.steps{margin:0; padding:0 0 0 4px; list-style:none; counter-reset:s}
+.steps li{
+  counter-increment:s; position:relative; padding:0 0 18px 44px; color:var(--gray-deep); font-size:15px; line-height:1.45;
+}
+.steps li::before{
+  content:counter(s); position:absolute; left:0; top:-2px; width:30px; height:30px; border-radius:15px;
+  background:var(--pink); color:var(--red); font-family:var(--head); font-weight:600; font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+}
 @media (max-width:520px){ .scanbody{padding:12px} }
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
@@ -416,9 +437,9 @@ td:first-child{color:var(--dark); font-weight:500}
 
     <div class="scanview" id="scanview" hidden role="dialog" aria-modal="true" aria-labelledby="scanCount">
       <div class="scanbar">
-        <button type="button" class="linkbtn" id="scanClose" data-i18n="scan.close">Close</button>
+        <button type="button" class="linkbtn" id="scanClose">Close</button>
         <span class="count" id="scanCount"></span>
-        <button type="button" class="linkbtn" id="scanUndo" data-i18n="scan.back" hidden>Back</button>
+        <span class="linkbtn" id="scanUndo" aria-hidden="true" style="visibility:hidden">&nbsp;</span>
       </div>
       <div class="scanbody" id="scanBody"></div>
       <div class="scanfoot" id="scanFoot"></div>
@@ -469,7 +490,7 @@ td:first-child{color:var(--dark); font-weight:500}
     </section>
 
     <p class="foot">
-      <span class="build">v20260914-1121</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
+      <span class="build">v20260914-1152</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
       <a href="https://github.com/jimbodakilla/maria-pdf-reduce" data-i18n="foot.src">Source on GitHub</a>
       <span class="sig" data-i18n="tagline">SAME QUALITY. SMALLER FILES.</span>
     </p>
@@ -478,7 +499,7 @@ td:first-child{color:var(--dark); font-weight:500}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-<script src="scanner.js?v=20260914-1121"></script>
+<script src="scanner.js?v=20260914-1152"></script>
 <script>
 (() => {
 "use strict";
@@ -496,23 +517,31 @@ const ES = {
   "drop.sub":"Todos los archivos que quieras, también carpetas. No se sube nada.",
   "scan.open":"Escanear papel con la cámara",
   "scan.close":"Cerrar","scan.back":"Atrás",
+  "scan.confirmClose":"Si sales ahora se borran las fotos que tomaste. ¿Salir igual?",
   "scan.take":"Tomar foto de la hoja",
   "scan.addPage":"Añadir otra página","scan.make":"Crear el PDF",
-  "scan.use":"Usar esta página","scan.adjust":"Ajustar los bordes","scan.retake":"Repetir la foto",
+  "scan.use":"Usar esta página","scan.adjust":"Mover las esquinas","scan.retake":"Tomar la foto otra vez",
   "scan.done":"Listo","scan.working":"Procesando la foto…","scan.building":"Creando el PDF…",
   "scan.hintFirst":"Pon la hoja sobre una mesa, con buena luz, y toma la foto de arriba.",
+  "scan.emptyTitle":"Escanear un documento",
+  "scan.step1":"Pon la hoja sobre una mesa, con buena luz.",
+  "scan.step2":"Toma una foto de cada página, desde arriba.",
+  "scan.step3":"Crea el PDF y envíalo por correo o WhatsApp.",
+  "scan.confirmDelete":"¿Quitar la página {n}?",
+  "scan.confirmDiscard":"Esta foto todavía no se ha guardado. ¿Descartarla?",
+  "scan.confirmNew":"¿Empezar otro documento? Se borrarán las páginas de este.",
   "scan.hintReview":"Si se ve derecha y completa, úsala. Si no, ajusta los bordes.",
   "scan.hintEdit":"Arrastra los cuatro puntos a las esquinas de la hoja.",
-  "scan.page":"Página {n}","scan.pages":"{n} páginas","scan.pages1":"1 página","scan.nopages":"Sin páginas todavía",
+  "scan.page":"Página {n}","scan.pages":"{n} páginas","scan.pages1":"1 página","scan.nopages":"Toma la primera foto",
   "scan.noedge":"No se encontró la hoja. Ajusta los bordes a mano.",
   "scan.badphoto":"No se pudo leer esa foto. Inténtalo de nuevo.",
   "scan.delete":"Quitar esta página",
   "scan.colour":"Color","scan.gray":"Gris","scan.bw":"Blanco y negro",
-  "scan.done2":"Continuar","scan.moveLeft":"Mover antes","scan.moveRight":"Mover después",
+  "scan.done2":"Continuar","scan.moveLeft":"Mover hacia arriba","scan.moveRight":"Mover hacia abajo",
   "scan.prev":"Anterior","scan.next":"Siguiente",
   "scan.pageOf":"Página {n} de {m}","scan.pageSize":"Esta página pesa {s}",
-  "scan.total":"Total {s}","scan.tapPage":"Toca una página para verla",
-  "scan.ready":"Tu PDF está listo: {s}","scan.share":"Enviar por correo o WhatsApp","scan.save":"Guardar el archivo",
+  "scan.total":"Total {s}","scan.tapPage":"Toca una página para verla en grande",
+  "scan.ready":"Listo. Tu PDF pesa {s}, ya entra en un correo.","scan.share":"Enviar por correo o WhatsApp","scan.save":"Guardar en el teléfono",
   "scan.newdoc":"Escanear otro documento",
   "preset.legend":"¿Qué tan pequeños los quieres?",
   "preset.a.t":"Máxima calidad","preset.a.s":"Unas 5 veces más pequeño",
@@ -579,23 +608,31 @@ const EN = {
   "r.savedLabel":"saved","r.savedLine":"saved, {x}× smaller overall","r.none":"No files could be made smaller.",
   "scan.open":"Scan paper with the camera",
   "scan.close":"Close","scan.back":"Back",
+  "scan.confirmClose":"If you leave now the photos you took will be deleted. Leave anyway?",
   "scan.take":"Take a photo of the page",
   "scan.addPage":"Add another page","scan.make":"Create the PDF",
-  "scan.use":"Use this page","scan.adjust":"Adjust the edges","scan.retake":"Take it again",
+  "scan.use":"Use this page","scan.adjust":"Move the corners","scan.retake":"Take the photo again",
   "scan.done":"Done","scan.working":"Working on the photo…","scan.building":"Creating the PDF…",
   "scan.hintFirst":"Put the page on a table in good light and photograph it from above.",
+  "scan.emptyTitle":"Scan a document",
+  "scan.step1":"Put the page on a table, in good light.",
+  "scan.step2":"Take a photo of each page, from above.",
+  "scan.step3":"Create the PDF and send it by email or WhatsApp.",
+  "scan.confirmDelete":"Remove page {n}?",
+  "scan.confirmDiscard":"This photo has not been saved yet. Discard it?",
+  "scan.confirmNew":"Start another document? The pages in this one will be cleared.",
   "scan.hintReview":"If it looks straight and complete, use it. If not, adjust the edges.",
   "scan.hintEdit":"Drag the four dots to the corners of the page.",
-  "scan.page":"Page {n}","scan.pages":"{n} pages","scan.pages1":"1 page","scan.nopages":"No pages yet",
+  "scan.page":"Page {n}","scan.pages":"{n} pages","scan.pages1":"1 page","scan.nopages":"Take the first photo",
   "scan.noedge":"Could not find the page. Adjust the edges by hand.",
   "scan.badphoto":"That photo could not be read. Please try again.",
   "scan.delete":"Remove this page",
   "scan.colour":"Colour","scan.gray":"Grey","scan.bw":"Black and white",
-  "scan.done2":"Continue","scan.moveLeft":"Move earlier","scan.moveRight":"Move later",
+  "scan.done2":"Continue","scan.moveLeft":"Move up","scan.moveRight":"Move down",
   "scan.prev":"Previous","scan.next":"Next",
   "scan.pageOf":"Page {n} of {m}","scan.pageSize":"This page is {s}",
-  "scan.total":"Total {s}","scan.tapPage":"Tap a page to see it",
-  "scan.ready":"Your PDF is ready: {s}","scan.share":"Send by email or WhatsApp","scan.save":"Save the file",
+  "scan.total":"Total {s}","scan.tapPage":"Tap a page to see it full size",
+  "scan.ready":"Done. Your PDF is {s}, small enough to email.","scan.share":"Send by email or WhatsApp","scan.save":"Save to the phone",
   "scan.newdoc":"Scan another document",
   "doc.title":"Maria’s PDF Reduce — make PDFs smaller","r.under":"under 1 KB","r.xsmaller":"{x}× smaller",
   "r.deadTitle":"Maria’s PDF Reduce could not load",
@@ -1241,7 +1278,9 @@ if (typeof Scanner !== "undefined") (function(){
   /* ---------- screens ---------- */
   function render(){
     body.innerHTML = ""; foot.innerHTML = "";
-    backBtn.hidden = screen === "pages" || screen === "done";
+    // the left control is either "up one level" or, at the top, the way out
+    const atTop = screen === "pages";
+    closeBtn.textContent = atTop ? t("scan.close") : "‹ " + t("scan.back");
     countEl.textContent = screen === "done" ? t("scan.done")
       : screen === "preview" ? t("scan.pageOf", { n: preview + 1, m: pages.length })
       : (screen === "review" || screen === "edit") ? t("scan.page", { n: (shot && shot.editing != null ? shot.editing + 1 : pages.length + 1) })
@@ -1254,7 +1293,7 @@ if (typeof Scanner !== "undefined") (function(){
       const im = el("img", "shot"); im.src = shot.previewUrl; im.alt = "";
       body.appendChild(im);
       const looks = el("div", "looks");
-      [["colour","scan.colour"],["gray","scan.gray"],["bw","scan.bw"]].forEach(([k, key]) => {
+      [["colour","scan.colour"],["bw","scan.bw"]].forEach(([k, key]) => {
         const b = el("button", null, t(key));
         b.type = "button"; b.dataset.k = key;
         b.setAttribute("aria-pressed", String(look === k));
@@ -1271,7 +1310,7 @@ if (typeof Scanner !== "undefined") (function(){
       body.appendChild(looks);
       body.appendChild(el("p", "scanhint", shot.detected ? t("scan.hintReview") : t("scan.noedge")));
       foot.appendChild(button("pick", "scan.use", usePage));
-      foot.appendChild(button("orbtn", "scan.adjust", () => { screen = "edit"; render(); }));
+      foot.appendChild(button("orbtn", "scan.adjust", () => { shot.origin = "review"; screen = "edit"; render(); }));
       foot.appendChild(button("orbtn", "scan.retake", takePhoto));
       return;
     }
@@ -1286,44 +1325,40 @@ if (typeof Scanner !== "undefined") (function(){
       if (navigator.canShare && navigator.canShare({ files: [lastPdf.file] }))
         foot.appendChild(button("pick", "scan.share", shareIt));
       foot.appendChild(button("orbtn", "scan.save", () => saveBlob(lastPdf.blob, lastPdf.name)));
-      foot.appendChild(button("orbtn", "scan.newdoc", () => { reset(); screen = "pages"; render(); }));
+      foot.appendChild(button("orbtn", "scan.newdoc", () => {
+        if (!confirm(t("scan.confirmNew"))) return;
+        reset(); screen = "pages"; render();
+      }));
       return;
     }
 
     /* pages */
     if (!pages.length){
-      body.appendChild(el("p", "scanhint", t("scan.hintFirst")));
+      const box = el("div", "empty");
+      box.appendChild(el("p", "emptyTitle", t("scan.emptyTitle")));
+      const ol = el("ol", "steps");
+      [1,2,3].forEach(k => ol.appendChild(el("li", null, t("scan.step" + k))));
+      box.appendChild(ol);
+      body.appendChild(box);
     } else {
       const ul = el("ul", "pagegrid");
       pages.forEach((pg, i) => {
         const li = el("li");
-        const im = el("img"); im.src = pg.url; im.alt = "";
-        const del = el("button", "del", "×");
-        del.type = "button"; del.title = t("scan.delete"); del.setAttribute("aria-label", t("scan.delete"));
-        del.addEventListener("click", () => { URL.revokeObjectURL(pg.url); pages.splice(i, 1); render(); });
-        const move = (dir) => {
-          const j = i + dir;
-          if (j < 0 || j >= pages.length) return;
-          const tmp = pages[i]; pages[i] = pages[j]; pages[j] = tmp;
-          render();
-        };
-        const left = el("button", "pgbtn l", "\u2039");
-        left.type = "button"; left.disabled = i === 0;
-        left.setAttribute("aria-label", t("scan.moveLeft"));
-        left.addEventListener("click", () => move(-1));
-        const right = el("button", "pgbtn r", "\u203A");
-        right.type = "button"; right.disabled = i === pages.length - 1;
-        right.setAttribute("aria-label", t("scan.moveRight"));
-        right.addEventListener("click", () => move(1));
-        im.addEventListener("click", () => { preview = i; screen = "preview"; render(); });
-        im.style.cursor = "pointer";
-        li.appendChild(im); li.appendChild(el("span", "no", String(i + 1))); li.appendChild(del);
-        if (pages.length > 1){ li.appendChild(left); li.appendChild(right); }
+        const im = el("img"); im.src = pg.url; im.alt = t("scan.pageOf", { n: i + 1, m: pages.length });
+        li.setAttribute("role", "button");
+        li.tabIndex = 0;
+        const openIt = () => { preview = i; screen = "preview"; render(); };
+        li.addEventListener("click", openIt);
+        li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openIt(); } });
+        li.appendChild(im); li.appendChild(el("span", "no", String(i + 1)));
         ul.appendChild(li);
       });
-      body.appendChild(ul);
       const total = pages.reduce((a, p) => a + p.blob.size, 0);
-      body.appendChild(el("p", "total", t("scan.tapPage") + " · " + t("scan.total", { s: mb(total) })));
+      const cap = el("p", "total");
+      cap.style.margin = "0 0 12px";
+      cap.textContent = t("scan.tapPage") + ".";
+      body.appendChild(cap);
+      body.appendChild(ul);
     }
     foot.appendChild(button("pick", pages.length ? "scan.addPage" : "scan.take", takePhoto));
     if (pages.length) foot.appendChild(button("orbtn", "scan.make", makePdf));
@@ -1385,10 +1420,13 @@ if (typeof Scanner !== "undefined") (function(){
         (px - span/2) * hiScale, (py - span/2) * hiScale, span * hiScale, span * hiScale,
         0, 0, 132, 132);
       // sit the glass away from the finger, and flip it near the top edge
+      // put the glass on the opposite side of the finger, horizontally, so a corner
+      // near the top of the image is not covered by the fingertip
       const dx = px * sc, dy = py * sc;
-      const above = dy > 150;
-      loupe.style.left = Math.max(0, Math.min(c.width - 132, dx - 66)) + "px";
-      loupe.style.top  = (above ? dy - 150 : dy + 26) + "px";
+      const toRight = dx < c.width / 2;
+      const lx = toRight ? dx + 34 : dx - 166;
+      loupe.style.left = Math.max(0, Math.min(c.width - 132, lx)) + "px";
+      loupe.style.top  = Math.max(0, Math.min(c.height - 132, dy - 66)) + "px";
       loupe.classList.add("on");
     };
     const hideLoupe = () => loupe.classList.remove("on");
@@ -1427,12 +1465,12 @@ if (typeof Scanner !== "undefined") (function(){
     body.appendChild(wrap);
     body.appendChild(el("p", "scanhint", shot.detected ? t("scan.hintEdit") : t("scan.noedge")));
     redraw();
-    foot.appendChild(button("pick", "scan.done2", async () => {
+    foot.appendChild(button("pick", "scan.use", async () => {
       body.dataset.msg = t("scan.working"); screen = "busy"; render();
       await new Promise(r => setTimeout(r, 20));
       await reflatten();
       shot.detected = true;                 // the corners are now the user's own
-      screen = "review"; render();
+      usePage();
     }));
   }
 
@@ -1451,9 +1489,17 @@ if (typeof Scanner !== "undefined") (function(){
     next.addEventListener("click", () => { preview++; render(); });
     nav.appendChild(prev); nav.appendChild(next);
     body.appendChild(nav);
-    body.appendChild(el("p", "total", t("scan.pageSize", { s: mb(pg.blob.size) })));
 
-    foot.appendChild(button("pick", "scan.adjust", () => reopen(preview)));
+    const looks = el("div", "looks");
+    [["colour","scan.colour"],["bw","scan.bw"]].forEach(([k, key]) => {
+      const b = el("button", null, t(key));
+      b.type = "button"; b.dataset.k = key;
+      b.setAttribute("aria-pressed", String((pg.look || "colour") === k));
+      b.addEventListener("click", () => { if ((pg.look || "colour") !== k) recolour(preview, k); });
+      looks.appendChild(b);
+    });
+    body.appendChild(looks);
+    foot.appendChild(button("orbtn", "scan.adjust", () => reopen(preview)));
     const pair = el("div", "pairrow");
     const back = el("button", "orbtn", t("scan.moveLeft"));
     back.type = "button"; back.dataset.k = "scan.moveLeft"; back.disabled = preview === 0;
@@ -1470,10 +1516,28 @@ if (typeof Scanner !== "undefined") (function(){
     pair.appendChild(back); pair.appendChild(fwd);
     foot.appendChild(pair);
     foot.appendChild(button("orbtn", "scan.delete", () => {
+      if (!confirm(t("scan.confirmDelete", { n: preview + 1 }))) return;
       URL.revokeObjectURL(pages[preview].url);
       pages.splice(preview, 1);
       screen = "pages"; render();
     }));
+  }
+
+  /* redo one finished page in a different tone, from its original photo */
+  async function recolour(i, mode){
+    const pg = pages[i];
+    if (!pg.srcFile) return;
+    body.dataset.msg = t("scan.working"); screen = "busy"; render();
+    await new Promise(r => setTimeout(r, 20));
+    try {
+      const src = await loadImage(pg.srcFile);
+      look = mode;
+      const flat = flatten(src, pg.corners, mode);
+      const blob = await toBlob(flat, JPEG_Q, mode === "bw");
+      URL.revokeObjectURL(pg.url);
+      pages[i] = Object.assign({}, pg, { blob, url: URL.createObjectURL(blob), png: mode === "bw", look: mode });
+    } catch (e){ /* keep the page as it was */ }
+    screen = "preview"; render();
   }
 
   /* re-open a finished page in the corner editor, from its original photo */
@@ -1486,7 +1550,7 @@ if (typeof Scanner !== "undefined") (function(){
       const src = await loadImage(pg.srcFile);
       look = pg.look || look;
       shot = { src, corners: pg.corners.map(p => p.slice()), detected: true,
-               previewUrl: null, srcFile: pg.srcFile, editing: i };
+               previewUrl: null, srcFile: pg.srcFile, editing: i, origin: "preview" };
       await reflatten();
       screen = "edit";
     } catch (e){
@@ -1499,9 +1563,11 @@ if (typeof Scanner !== "undefined") (function(){
   /* ---------- actions ---------- */
   function takePhoto(){ cam.value = ""; cam.click(); }
 
+  let capturing = false;
   cam.addEventListener("change", async () => {
     const f = cam.files && cam.files[0];
-    if (!f) return;
+    if (!f || capturing) return;             // a second change event must not race the first
+    capturing = true;
     body.dataset.msg = t("scan.working"); screen = "busy"; render();
     await new Promise(r => setTimeout(r, 30));
     try {
@@ -1516,21 +1582,25 @@ if (typeof Scanner !== "undefined") (function(){
         [src.width*(1-inset), src.height*(1-inset)], [src.width*inset, src.height*(1-inset)]];
       shot = { src, corners, detected: sure, previewUrl: null, srcFile: f, editing: null };
       await reflatten();
-      screen = sure ? "review" : "edit";
+      shot.origin = sure ? null : "capture";
+      if (sure){ capturing = false; usePage(); return; }   // iOS already confirmed it; do not ask twice
+      screen = "edit";
     } catch (e){
       shot = null; screen = "pages";
       body.dataset.msg = "";
       alert(t("scan.badphoto"));
-    }
+    } finally { capturing = false; }
     render();
   });
 
   async function reflatten(){
-    const flat = flatten(shot.src, shot.corners, look);
+    const mine = shot;                       // this call belongs to one photo
+    const flat = flatten(mine.src, mine.corners, look);
     const blob = await toBlob(flat, JPEG_Q, look === "bw");
-    if (shot.previewUrl) URL.revokeObjectURL(shot.previewUrl);
-    shot.previewUrl = URL.createObjectURL(blob);
-    shot.blob = blob;
+    if (shot !== mine) return;               // superseded or committed while encoding
+    if (mine.previewUrl) URL.revokeObjectURL(mine.previewUrl);
+    mine.previewUrl = URL.createObjectURL(blob);
+    mine.blob = blob;
   }
 
   function usePage(){
@@ -1564,7 +1634,9 @@ if (typeof Scanner !== "undefined") (function(){
       page.drawImage(jpg, { x: 0, y: 0, width: pw, height: ph });
     }
     const bytes = await doc.save({ useObjectStreams: true });
-    const name = "maria-" + new Date().toISOString().slice(0, 10) + ".pdf";
+    const d = new Date();
+    const pad = v => String(v).padStart(2, "0");
+    const name = `maria-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}-${pages.length}p.pdf`;
     const blob = new Blob([bytes], { type: "application/pdf" });
     lastPdf = { bytes, blob, name, file: new File([blob], name, { type: "application/pdf" }) };
     screen = "done"; render();
@@ -1579,25 +1651,57 @@ if (typeof Scanner !== "undefined") (function(){
     pages.forEach(p => URL.revokeObjectURL(p.url));
     pages = []; shot = null; lastPdf = null;
   }
-  function open(){ screen = "pages"; view.hidden = false; document.body.style.overflow = "hidden"; render(); takePhoto(); }
+  function goBack(){
+    if (screen === "preview"){ screen = "pages"; }
+    else if (screen === "edit"){
+      const o = shot && shot.origin;
+      if (o === "preview"){ preview = shot.editing; screen = "preview"; shot = null; }
+      else if (o === "review"){ screen = "review"; }
+      else {
+        if (!confirm(t("scan.confirmDiscard"))) return;   // this photo is not saved yet
+        shot = null; screen = "pages";
+      }
+    }
+    else if (screen === "review"){
+      if (shot && shot.editing != null){ preview = shot.editing; screen = "preview"; }
+      else { screen = "pages"; }
+      shot = null;
+    }
+    else { screen = "pages"; }   // including "done": the PDF is kept, she can add a page
+    render();
+  }
+  function leave(){
+    if (pages.length && !confirm(t("scan.confirmClose"))) return;
+    close();
+  }
+  function open(){
+    screen = "pages"; view.hidden = false; document.body.style.overflow = "hidden";
+    try { history.pushState({ scan: 1 }, ""); } catch (e) {}
+    render(); takePhoto();
+  }
   function close(){ view.hidden = true; document.body.style.overflow = ""; reset(); }
 
   openBtn.addEventListener("click", open);
-  closeBtn.addEventListener("click", close);
-  backBtn.addEventListener("click", () => {
-  if (screen === "preview"){ screen = "pages"; }
-  else if (screen === "edit" && shot && shot.editing != null){ screen = "preview"; shot = null; }
-  else if (screen === "edit" && shot){ screen = "review"; }
-  else { screen = "pages"; }
-  render();
-});
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !view.hidden) close(); });
+  closeBtn.addEventListener("click", () => {
+    if (screen === "pages") leave(); else goBack();
+  });
+  // a back-swipe is the most habitual gesture on an iPhone; keep it inside the scanner
+  window.addEventListener("popstate", () => {
+    if (view.hidden) return;
+    try { history.pushState({ scan: 1 }, ""); } catch (e) {}
+    if (screen === "pages") leave(); else goBack();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape" || view.hidden) return;
+    if (screen === "pages") leave(); else goBack();
+  });
   window.addEventListener("prensa:lang", render);
-  window.__scan = { open, state: () => ({ screen, pages: pages.length }) };
+  window.__scan = { open, state: () => ({ screen, pages: pages.length, origin: shot && shot.origin, hasShot: !!shot }) };
 })();
 
 window.addEventListener("beforeunload", e => {
-  if (running){ e.preventDefault(); e.returnValue = ""; }
+  const scanning = window.__scan && window.__scan.state().pages > 0;
+  if (running || scanning){ e.preventDefault(); e.returnValue = ""; }
 });
 window.__prensa = { press };
 })();
