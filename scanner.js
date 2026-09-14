@@ -326,59 +326,125 @@ function warp(img, corners, maxLong){
 }
 
 /* ---------- public: make it look like a scan ----------
-   Divides out the lighting gradient so paper reads as white everywhere, the way a
-   flatbed would, then applies the requested look. */
+   The lighting across a phone photo is smooth, so model it as a smooth surface
+   rather than a grid of local guesses. A grid puts a wrong estimate in every cell
+   the subject covers, which shows up as blotches in the finished page. */
+function solveN(A, b, n){
+  for (let i = 0; i < n; i++){
+    let piv = i;
+    for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r;
+    if (Math.abs(A[piv][i]) < 1e-9) return null;
+    [A[i], A[piv]] = [A[piv], A[i]]; [b[i], b[piv]] = [b[piv], b[i]];
+    for (let r = i + 1; r < n; r++){
+      const f = A[r][i] / A[i][i];
+      for (let c = i; c < n; c++) A[r][c] -= f * A[i][c];
+      b[r] -= f * b[i];
+    }
+  }
+  const x = new Float64Array(n);
+  for (let i = n - 1; i >= 0; i--){
+    let sum = b[i];
+    for (let c = i + 1; c < n; c++) sum -= A[i][c] * x[c];
+    x[i] = sum / A[i][i];
+  }
+  return x;
+}
+const qbasis = (x, y) => [1, x, y, x*x, x*y, y*y];
+const lbasis = (x, y) => [1, x, y];
+function fitSurface(pts, n){
+  const basis = n === 3 ? lbasis : qbasis;
+  const A = [], b = new Float64Array(n);
+  for (let i = 0; i < n; i++) A.push(new Float64Array(n));
+  for (const p of pts){
+    const f = basis(p[0], p[1]);
+    for (let i = 0; i < n; i++){
+      for (let j = 0; j < n; j++) A[i][j] += f[i] * f[j];
+      b[i] += f[i] * p[2];
+    }
+  }
+  return solveN(A, b, n);
+}
+const evalSurface = (c, x, y) => {
+  const f = c.length === 3 ? lbasis(x, y) : qbasis(x, y);
+  let v = 0;
+  for (let i = 0; i < c.length; i++) v += c[i] * f[i];
+  return v;
+};
+/* fit to the bright side only, so ink and dark subjects do not drag the paper level down */
+function illumination(lum, W, H, order){
+  const n = order === 1 ? 3 : 6;
+  const step = Math.max(1, Math.round(Math.min(W, H) / 200));
+  const all = [];
+  for (let y = 0; y < H; y += step)
+    for (let x = 0; x < W; x += step)
+      all.push([(x / W) * 2 - 1, (y / H) * 2 - 1, lum[y * W + x]]);
+  let coef = fitSurface(all, n);
+  for (let it = 0; it < 3 && coef; it++){
+    const next = [];
+    for (const p of all) if (p[2] >= evalSurface(coef, p[0], p[1])) next.push(p);
+    if (next.length < 60) break;
+    const c2 = fitSurface(next, n);
+    if (!c2) break;
+    coef = c2;
+  }
+  return coef;
+}
+
+/* Note: automatic background removal was tried three ways and removed here.
+   Largest-bright-region picks the background, because ink fragments the sheet into
+   pieces smaller than the unbroken table. Thresholding after illumination correction
+   fails because the fitted surface absorbs the sheet-vs-table difference. Growing the
+   background from the frame edge climbs the soft paper edge and eats the sheet.
+   Cropping to the four corners removes the surface exactly and is already in the UI. */
 function enhance(img, mode){
   const { width:W, height:H, data } = img;
   if (mode === "photo") return img;
 
-  // background (illumination) estimate: coarse grid of local high percentiles
-  const GX = 12, GY = 16;
-  const cw = Math.ceil(W / GX), ch = Math.ceil(H / GY);
-  const bg = new Float32Array(GX * GY);
-  const bucket = new Uint8Array(cw * ch);
-  for (let gy = 0; gy < GY; gy++){
-    for (let gx = 0; gx < GX; gx++){
-      const x0 = gx*cw, x1 = Math.min(W, x0+cw), y0 = gy*ch, y1 = Math.min(H, y0+ch);
-      let n = 0;
-      for (let y = y0; y < y1; y++){
-        let o = (y*W + x0)*4;
-        for (let x = x0; x < x1; x++, o += 4)
-          bucket[n++] = (0.299*data[o] + 0.587*data[o+1] + 0.114*data[o+2]) | 0;
-      }
-      if (!n){ bg[gy*GX+gx] = 255; continue; }
-      const arr = Array.prototype.slice.call(bucket.subarray(0, n)).sort((a,b)=>a-b);
-      bg[gy*GX+gx] = Math.max(40, arr[Math.floor(n * 0.88)]);       // paper, not ink
+  const lum = new Float32Array(W * H);
+  for (let i = 0, o = 0; i < W * H; i++, o += 4)
+    lum[i] = 0.299*data[o] + 0.587*data[o+1] + 0.114*data[o+2];
+
+  const coef = illumination(lum, W, H, 2);
+  const bgAt = coef
+    ? (x, y) => Math.max(28, evalSurface(coef, (x / W) * 2 - 1, (y / H) * 2 - 1))
+    : () => 200;
+
+  // white balance: what the paper reads per channel once the lighting is divided out
+  const gains = [1, 1, 1];
+  {
+    const N = 20000, stride = Math.max(1, Math.floor(W * H / N));
+    const samp = [[], [], []];
+    for (let i = 0, o = 0; i < W * H; i += stride, o = i * 4){
+      const b = bgAt(i % W, (i / W) | 0);
+      for (let c = 0; c < 3; c++) samp[c].push(data[o + c] / b);
+    }
+    for (let c = 0; c < 3; c++){
+      samp[c].sort((a, b) => a - b);
+      const p = samp[c][Math.floor(samp[c].length * 0.92)] || 1;
+      gains[c] = p > 0.2 ? 1 / p : 1;
     }
   }
-  const bgAt = (x, y) => {                                          // bilinear over the grid
-    const fx = Math.min(GX-1.001, Math.max(0, x / cw - 0.5));
-    const fy = Math.min(GY-1.001, Math.max(0, y / ch - 0.5));
-    const x0 = fx|0, y0 = fy|0, dx = fx-x0, dy = fy-y0;
-    const a = bg[y0*GX+x0], b = bg[y0*GX+x0+1], c = bg[(y0+1)*GX+x0], d = bg[(y0+1)*GX+x0+1];
-    return a*(1-dx)*(1-dy) + b*dx*(1-dy) + c*(1-dx)*dy + d*dx*dy;
-  };
 
+  const BLACK = mode === "bw" ? 0 : 0.28;      // gentler than before, so colour is not crushed
   const out = new Uint8ClampedArray(data.length);
-  const BLACK = 0.42;                       // below this share of local paper -> full ink
   for (let y = 0; y < H; y++){
     for (let x = 0; x < W; x++){
-      const o = (y*W + x)*4, b = bgAt(x, y);
+      const o = (y * W + x) * 4, b = bgAt(x, y);
       if (mode === "bw"){
-        const l = (0.299*data[o] + 0.587*data[o+1] + 0.114*data[o+2]) / b;
-        const v = l < 0.62 ? 0 : 255;
-        out[o] = out[o+1] = out[o+2] = v; out[o+3] = 255;
+        const r = (lum[y*W + x] / b) * ((gains[0] + gains[1] + gains[2]) / 3);
+        const v = r < 0.76 ? 0 : 255;
+        out[o] = out[o+1] = out[o+2] = v;
       } else if (mode === "gray"){
-        const l = (0.299*data[o] + 0.587*data[o+1] + 0.114*data[o+2]) / b;
-        const v = (l - BLACK) / (1 - BLACK) * 255;
-        out[o] = out[o+1] = out[o+2] = v; out[o+3] = 255;
-      } else {                                                      // colour, flattened
+        const r = (lum[y*W + x] / b) * ((gains[0] + gains[1] + gains[2]) / 3);
+        const v = (r - BLACK) / (1 - BLACK) * 255;
+        out[o] = out[o+1] = out[o+2] = v;
+      } else {
         for (let c = 0; c < 3; c++){
-          const l = data[o+c] / b;
-          out[o+c] = (l - BLACK) / (1 - BLACK) * 255;
+          const r = (data[o+c] / b) * gains[c];
+          out[o+c] = (r - BLACK) / (1 - BLACK) * 255;
         }
-        out[o+3] = 255;
       }
+      out[o+3] = 255;
     }
   }
   return { data: out, width: W, height: H };
