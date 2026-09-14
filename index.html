@@ -321,6 +321,7 @@ td:first-child{color:var(--dark); font-weight:500}
 .pairrow{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .pairrow .orbtn{margin:0}
 .total{text-align:center; color:var(--gray); font-size:13.5px; margin:14px 0 0}
+.tonehint{text-align:center; color:var(--gray); font-size:13px; margin:10px 0 0}
 .empty{display:flex; flex-direction:column; justify-content:center; min-height:58vh; text-align:left; max-width:330px; margin:0 auto}
 .emptyTitle{font-family:var(--head); font-size:19px; font-weight:600; color:var(--dark); margin:0 0 16px; text-align:center}
 .steps{margin:0; padding:0 0 0 4px; list-style:none; counter-reset:s}
@@ -490,7 +491,7 @@ td:first-child{color:var(--dark); font-weight:500}
     </section>
 
     <p class="foot">
-      <span class="build">v20260914-1152</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
+      <span class="build">v20260914-1215</span><br><span data-i18n="foot">Runs entirely in your browser. No accounts, no uploads, no tracking.</span>
       <a href="https://github.com/jimbodakilla/maria-pdf-reduce" data-i18n="foot.src">Source on GitHub</a>
       <span class="sig" data-i18n="tagline">SAME QUALITY. SMALLER FILES.</span>
     </p>
@@ -499,7 +500,7 @@ td:first-child{color:var(--dark); font-weight:500}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-<script src="scanner.js?v=20260914-1152"></script>
+<script src="scanner.js?v=20260914-1215"></script>
 <script>
 (() => {
 "use strict";
@@ -537,6 +538,8 @@ const ES = {
   "scan.badphoto":"No se pudo leer esa foto. Inténtalo de nuevo.",
   "scan.delete":"Quitar esta página",
   "scan.colour":"Color","scan.gray":"Gris","scan.bw":"Blanco y negro",
+  "scan.colourHint":"Guarda los colores. Unos 400 KB por página.",
+  "scan.bwHint":"Ideal para documentos escritos. Unos 60 KB por página, casi 8 veces más liviano.",
   "scan.done2":"Continuar","scan.moveLeft":"Mover hacia arriba","scan.moveRight":"Mover hacia abajo",
   "scan.prev":"Anterior","scan.next":"Siguiente",
   "scan.pageOf":"Página {n} de {m}","scan.pageSize":"Esta página pesa {s}",
@@ -628,6 +631,8 @@ const EN = {
   "scan.badphoto":"That photo could not be read. Please try again.",
   "scan.delete":"Remove this page",
   "scan.colour":"Colour","scan.gray":"Grey","scan.bw":"Black and white",
+  "scan.colourHint":"Keeps the colours. About 400 KB a page.",
+  "scan.bwHint":"Best for written documents. About 60 KB a page, nearly 8 times lighter.",
   "scan.done2":"Continue","scan.moveLeft":"Move up","scan.moveRight":"Move down",
   "scan.prev":"Previous","scan.next":"Next",
   "scan.pageOf":"Page {n} of {m}","scan.pageSize":"This page is {s}",
@@ -1267,6 +1272,10 @@ if (typeof Scanner !== "undefined") (function(){
     } finally { URL.revokeObjectURL(url); }
   }
   function toBlob(img, q, asPng){
+    if (asPng){
+      const b = Scanner.png1bit(img);          // 1-bit greyscale: ~5x smaller than canvas PNG
+      if (b) return Promise.resolve(b);
+    }
     const c = document.createElement("canvas"); c.width = img.width; c.height = img.height;
     c.getContext("2d").putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
     return new Promise(res => c.toBlob(b => { c.width = c.height = 1; res(b); },
@@ -1356,10 +1365,20 @@ if (typeof Scanner !== "undefined") (function(){
       const total = pages.reduce((a, p) => a + p.blob.size, 0);
       const cap = el("p", "total");
       cap.style.margin = "0 0 12px";
-      cap.textContent = t("scan.tapPage") + ".";
+      cap.textContent = t("scan.tapPage") + " · " + t("scan.total", { s: mb(total) });
       body.appendChild(cap);
       body.appendChild(ul);
     }
+    const tone = el("div", "looks");
+    [["colour","scan.colour"],["bw","scan.bw"]].forEach(([k, key]) => {
+      const b = el("button", null, t(key));
+      b.type = "button"; b.dataset.k = key;
+      b.setAttribute("aria-pressed", String(look === k));
+      b.addEventListener("click", () => { look = k; render(); });
+      tone.appendChild(b);
+    });
+    body.appendChild(tone);
+    body.appendChild(el("p", "tonehint", t(look === "bw" ? "scan.bwHint" : "scan.colourHint")));
     foot.appendChild(button("pick", pages.length ? "scan.addPage" : "scan.take", takePhoto));
     if (pages.length) foot.appendChild(button("orbtn", "scan.make", makePdf));
   }
@@ -1535,7 +1554,8 @@ if (typeof Scanner !== "undefined") (function(){
       const flat = flatten(src, pg.corners, mode);
       const blob = await toBlob(flat, JPEG_Q, mode === "bw");
       URL.revokeObjectURL(pg.url);
-      pages[i] = Object.assign({}, pg, { blob, url: URL.createObjectURL(blob), png: mode === "bw", look: mode });
+      pages[i] = Object.assign({}, pg, { blob, url: URL.createObjectURL(blob), png: mode === "bw",
+                                         bits: mode === "bw" ? Scanner.packBilevel(flat, false) : null, look: mode });
     } catch (e){ /* keep the page as it was */ }
     screen = "preview"; render();
   }
@@ -1601,10 +1621,11 @@ if (typeof Scanner !== "undefined") (function(){
     if (mine.previewUrl) URL.revokeObjectURL(mine.previewUrl);
     mine.previewUrl = URL.createObjectURL(blob);
     mine.blob = blob;
+    mine.bits = look === "bw" ? Scanner.packBilevel(flat, false) : null;
   }
 
   function usePage(){
-    const entry = { blob: shot.blob, url: shot.previewUrl, png: look === "bw",
+    const entry = { blob: shot.blob, url: shot.previewUrl, png: look === "bw", bits: shot.bits,
                     srcFile: shot.srcFile, corners: shot.corners.map(p => p.slice()), look };
     if (shot.editing != null){
       URL.revokeObjectURL(pages[shot.editing].url);
@@ -1625,6 +1646,30 @@ if (typeof Scanner !== "undefined") (function(){
     await new Promise(r => setTimeout(r, 30));
     const doc = await PDFDocument.create();
     for (const pg of pages){
+      if (pg.bits && typeof pako !== "undefined"){
+        const { bytes: raw, width: iw, height: ih } = pg.bits;
+        const packed = pako.deflate(raw, { level: 9 });
+        const d = PDFDict.withContext(doc.context);
+        d.set(PDFName.of("Type"), PDFName.of("XObject"));
+        d.set(PDFName.of("Subtype"), PDFName.of("Image"));
+        d.set(PDFName.of("Width"), PDFNumber.of(iw));
+        d.set(PDFName.of("Height"), PDFNumber.of(ih));
+        d.set(PDFName.of("ColorSpace"), PDFName.of("DeviceGray"));
+        d.set(PDFName.of("BitsPerComponent"), PDFNumber.of(1));
+        d.set(PDFName.of("Filter"), PDFName.of("FlateDecode"));
+        d.set(PDFName.of("Length"), PDFNumber.of(packed.length));
+        const ref = doc.context.register(PDFRawStream.of(d, packed));
+        const sc = 842 / Math.max(iw, ih);
+        const pw = iw * sc, ph = ih * sc;
+        const page = doc.addPage([pw, ph]);
+        const nm = page.node.newXObject("Im", ref);
+        page.pushOperators(
+          PDFLib.pushGraphicsState(),
+          PDFLib.concatTransformationMatrix(pw, 0, 0, ph, 0, 0),
+          PDFLib.drawObject(nm),
+          PDFLib.popGraphicsState());
+        continue;
+      }
       const bytes = await pg.blob.arrayBuffer();
       const jpg = pg.png ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
       // a sane physical page, unlike the 31-inch pages phone scanners emit
@@ -1696,7 +1741,7 @@ if (typeof Scanner !== "undefined") (function(){
     if (screen === "pages") leave(); else goBack();
   });
   window.addEventListener("prensa:lang", render);
-  window.__scan = { open, state: () => ({ screen, pages: pages.length, origin: shot && shot.origin, hasShot: !!shot }) };
+  window.__scan = { open, state: () => ({ screen, pages: pages.length, origin: shot && shot.origin, hasShot: !!shot, look }) };
 })();
 
 window.addEventListener("beforeunload", e => {

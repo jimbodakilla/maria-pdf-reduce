@@ -428,7 +428,16 @@ function enhance(img, mode){
     const samp = [[], [], []];
     for (let i = 0, o = 0; i < W * H; i += stride, o = i * 4){
       const b = bgAt(i % W, (i / W) | 0);
-      for (let c = 0; c < 3; c++) samp[c].push(data[o + c] / b);
+      const r0 = data[o] / b, g0 = data[o+1] / b, b0 = data[o+2] / b;
+      const hi = Math.max(r0, g0, b0), lo = Math.min(r0, g0, b0);
+      if (hi < 0.55 || hi - lo > 0.16) continue;   // ink, or a coloured mark; not paper
+      samp[0].push(r0); samp[1].push(g0); samp[2].push(b0);
+    }
+    if (samp[0].length < 200){                     // nothing neutral to measure
+      for (let i = 0, o = 0; i < W * H; i += stride, o = i * 4){
+        const b = bgAt(i % W, (i / W) | 0);
+        for (let c = 0; c < 3; c++) samp[c].push(data[o + c] / b);
+      }
     }
     for (let c = 0; c < 3; c++){
       samp[c].sort((a, b) => a - b);
@@ -438,29 +447,127 @@ function enhance(img, mode){
   }
 
   const BLACK = mode === "bw" ? 0 : 0.28;      // gentler than before, so colour is not crushed
+  const PAPER = 232;                           // above this a pixel is blank paper, not faint ink
+  let smooth = lum;
+  if (mode === "bw"){                          // 3x3 mean, so grain cannot decide a pixel
+    smooth = new Float32Array(W * H);
+    for (let y = 0; y < H; y++){
+      const y0 = y > 0 ? y - 1 : 0, y1 = y < H - 1 ? y + 1 : H - 1;
+      for (let x = 0; x < W; x++){
+        const x0 = x > 0 ? x - 1 : 0, x1 = x < W - 1 ? x + 1 : W - 1;
+        let sum = 0, k = 0;
+        for (let yy = y0; yy <= y1; yy++)
+          for (let xx = x0; xx <= x1; xx++){ sum += lum[yy*W + xx]; k++; }
+        smooth[y*W + x] = sum / k;
+      }
+    }
+  }
   const out = new Uint8ClampedArray(data.length);
   for (let y = 0; y < H; y++){
     for (let x = 0; x < W; x++){
       const o = (y * W + x) * 4, b = bgAt(x, y);
       if (mode === "bw"){
-        const r = (lum[y*W + x] / b) * ((gains[0] + gains[1] + gains[2]) / 3);
-        const v = r < 0.76 ? 0 : 255;
+        const r = (smooth[y*W + x] / b) * ((gains[0] + gains[1] + gains[2]) / 3);
+        const v = r < 0.74 ? 0 : 255;
         out[o] = out[o+1] = out[o+2] = v;
       } else if (mode === "gray"){
         const r = (lum[y*W + x] / b) * ((gains[0] + gains[1] + gains[2]) / 3);
-        const v = (r - BLACK) / (1 - BLACK) * 255;
+        let v = (r - BLACK) / (1 - BLACK) * 255;
+        if (v >= PAPER) v = 255;                   // blank paper
         out[o] = out[o+1] = out[o+2] = v;
       } else {
-        for (let c = 0; c < 3; c++){
-          const r = (data[o+c] / b) * gains[c];
-          out[o+c] = (r - BLACK) / (1 - BLACK) * 255;
-        }
+        let r0 = ((data[o]   / b) * gains[0] - BLACK) / (1 - BLACK) * 255;
+        let g0 = ((data[o+1] / b) * gains[1] - BLACK) / (1 - BLACK) * 255;
+        let b0 = ((data[o+2] / b) * gains[2] - BLACK) / (1 - BLACK) * 255;
+        const hi2 = Math.max(r0, g0, b0), lo2 = Math.min(r0, g0, b0);
+        if (lo2 >= PAPER && hi2 - lo2 <= 20){ r0 = g0 = b0 = 255; }   // blank paper
+        out[o] = r0; out[o+1] = g0; out[o+2] = b0;
       }
       out[o+3] = 255;
+    }
+  }
+  if (mode === "bw"){
+    const src = out.slice();
+    for (let y = 1; y < H - 1; y++){
+      for (let x = 1; x < W - 1; x++){
+        const o = (y*W + x) * 4;
+        let dark = 0;
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++)
+            if (src[((y+dy)*W + (x+dx)) * 4] < 128) dark++;
+        const self = src[o] < 128;
+        if (self && dark <= 1){ out[o] = out[o+1] = out[o+2] = 255; }       // lone black speck
+        else if (!self && dark >= 8){ out[o] = out[o+1] = out[o+2] = 0; }   // lone white pinhole
+      }
     }
   }
   return { data: out, width: W, height: H };
 }
 
-root.Scanner = { detectCorners, warp, enhance, outputSize, quadArea, homographyDstToSrc };
+/* ---------- 1-bit PNG ----------
+   Canvas only writes 8-bit RGBA, so a pure black-and-white page costs four channels
+   per pixel: about 250 KB for a text page. The same bitmap as a 1-bit greyscale PNG
+   is about 50 KB. For a 40-page filing that is the difference between 10 MB and 2 MB. */
+const CRCT = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++){
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes){
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRCT[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function chunk(type, data){
+  const out = new Uint8Array(12 + data.length);
+  const dv = new DataView(out.buffer);
+  dv.setUint32(0, data.length);
+  for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+  out.set(data, 8);
+  const body = out.subarray(4, 8 + data.length);
+  dv.setUint32(8 + data.length, crc32(body));
+  return out;
+}
+/* img must already be black or white; anything >=128 is treated as white */
+function packBilevel(img, withFilterByte){
+  const { width:W, height:H, data } = img;
+  const rowBytes = (W + 7) >> 3;
+  const stride = rowBytes + (withFilterByte ? 1 : 0);
+  const raw = new Uint8Array(stride * H);
+  let p = 0;
+  for (let y = 0; y < H; y++){
+    if (withFilterByte) raw[p++] = 0;                 // PNG filter: none
+    let byte = 0, bit = 7;
+    for (let x = 0; x < W; x++){
+      if (data[(y * W + x) * 4] >= 128) byte |= (1 << bit);   // 1 = white
+      if (bit === 0){ raw[p++] = byte; byte = 0; bit = 7; } else bit--;
+    }
+    if (bit !== 7) raw[p++] = byte;                   // flush a partial last byte
+  }
+  return { bytes: raw, width: W, height: H, rowBytes };
+}
+function png1bit(img){
+  if (typeof pako === "undefined") return null;      // fall back to canvas PNG
+  const { width:W, height:H } = img;
+  const raw = packBilevel(img, true).bytes;
+  const idat = pako.deflate(raw, { level: 9 });
+  const ihdr = new Uint8Array(13);
+  const dv = new DataView(ihdr.buffer);
+  dv.setUint32(0, W); dv.setUint32(4, H);
+  ihdr[8] = 1;    // bit depth
+  ihdr[9] = 0;    // colour type: greyscale
+  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  const parts = [new Uint8Array([137,80,78,71,13,10,26,10]),
+                 chunk("IHDR", ihdr), chunk("IDAT", idat), chunk("IEND", new Uint8Array(0))];
+  let total = 0; for (const a of parts) total += a.length;
+  const out = new Uint8Array(total);
+  let q = 0; for (const a of parts){ out.set(a, q); q += a.length; }
+  return new Blob([out], { type: "image/png" });
+}
+
+root.Scanner = { detectCorners, warp, enhance, outputSize, quadArea, homographyDstToSrc, png1bit, packBilevel };
 })(typeof window !== "undefined" ? window : globalThis);
